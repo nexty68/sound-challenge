@@ -123,44 +123,47 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script>
+  <script src="/socket.io/socket.io.js"></script>
+<script>
   document.addEventListener('DOMContentLoaded', () => {
-    const joinScreen = document.getElementById('join-screen');
-    const game = document.getElementById('game');
-    const joinBtn = document.getElementById('join-btn');
-    const nameInput = document.getElementById('name-input');
-    const recordBtn = document.getElementById('recordBtn');
-    const playBtn = document.getElementById('playBtn');
-    const submitBtn = document.getElementById('submitBtn');
-    const visualizer = document.getElementById('visualizer');
-    const recIndicator = document.getElementById('recIndicator');
-    const timerElem = document.getElementById('timer');
-    const mediaTitle = document.getElementById('media-title');
-    const originalAudio = document.getElementById('original-audio');
-    const videoPlayer = document.getElementById('video-player');
-    const mediaList = document.getElementById('media-list');
+    // DOM elements
+    const joinScreen       = document.getElementById('join-screen');
+    const game             = document.getElementById('game');
+    const joinBtn          = document.getElementById('join-btn');
+    const nameInput        = document.getElementById('name-input');
+    const recordBtn        = document.getElementById('recordBtn');
+    const playBtn          = document.getElementById('playBtn');
+    const submitBtn        = document.getElementById('submitBtn');
+    const visualizer       = document.getElementById('visualizer');
+    const recIndicator     = document.getElementById('recIndicator');
+    const timerElem        = document.getElementById('timer');
+    const mediaTitle       = document.getElementById('media-title');
+    const originalAudio    = document.getElementById('original-audio');
+    const videoPlayer      = document.getElementById('video-player');
+    const mediaList        = document.getElementById('media-list');
     const playersContainer = document.getElementById('players-container');
-    const votingStatus = document.getElementById('voting-status');
-    const showOriginalBtn = document.getElementById('showOriginalBtn');
-    const playAllBtn = document.getElementById('playAllBtn');
-    const endRoundBtn = document.getElementById('endRoundBtn');
-    const nextRoundBtn = document.getElementById('nextRoundBtn');
-    const resultsSection = document.getElementById('results-section');
-    const winnerName = document.getElementById('winner-name');
-    const winnerVotes = document.getElementById('winner-votes');
-    const winnerAudio = document.getElementById('winner-audio');
-    const scoreList = document.getElementById('score-list');
-    const scoreboard = document.getElementById('scoreboard');
+    const votingStatus     = document.getElementById('voting-status');
+    const showOriginalBtn  = document.getElementById('showOriginalBtn');
+    const playAllBtn       = document.getElementById('playAllBtn');
+    const endRoundBtn      = document.getElementById('endRoundBtn');
+    const nextRoundBtn     = document.getElementById('nextRoundBtn');
+    const resultsSection   = document.getElementById('results-section');
+    const winnerName       = document.getElementById('winner-name');
+    const winnerVotes      = document.getElementById('winner-votes');
+    const winnerAudio      = document.getElementById('winner-audio');
+    const scoreList        = document.getElementById('score-list');
+    const scoreboard       = document.getElementById('scoreboard');
 
+    // State
     let socket;
     let recorder, recordedChunks = [], mediaURL;
     let mediaLibrary = [];
     let playersData = {};
-    let isHost = false;
     let hasVoted = false;
     let voteCompleted = false;
     let scores = {};
 
+    // Visualizer functions
     function initVisualizer() {
       visualizer.innerHTML = '';
       for (let i = 0; i < 50; i++) {
@@ -172,13 +175,14 @@
     }
     function animateBars() {
       visualizer.querySelectorAll('.visualizer-bar').forEach(bar => {
-        bar.style.height = `${Math.random()*80 + 20}px`;
+        bar.style.height = `${Math.random() * 80 + 20}px`;
       });
     }
 
+    // Media list functions
     function renderMediaList() {
       mediaList.innerHTML = '';
-      mediaLibrary.forEach((m,i) => {
+      mediaLibrary.forEach((m, i) => {
         const btn = document.createElement('button');
         btn.className = 'btn btn-secondary';
         btn.textContent = m.title;
@@ -202,9 +206,10 @@
       submitBtn.disabled = true;
     }
 
+    // Render players + voting UI
     function renderPlayers() {
       playersContainer.innerHTML = '';
-      Object.entries(playersData).forEach(([name,p]) => {
+      Object.entries(playersData).forEach(([name, p]) => {
         const card = document.createElement('div');
         card.className = 'player-card';
         let html = `
@@ -216,62 +221,165 @@
           html += `
             <audio controls src="${p.audio}" style="width:100%;margin:10px 0;"></audio>
           `;
+          if (!voteCompleted && !hasVoted) {
+            html += `<button class="btn btn-secondary vote-btn">Voter</button>`;
+          }
         }
         card.innerHTML = html;
+        if (p.submitted && !voteCompleted && !hasVoted) {
+          const voteBtn = card.querySelector('.vote-btn');
+          voteBtn.onclick = () => {
+            hasVoted = true;
+            voteBtn.disabled = true;
+            socket.emit('vote', name);
+          };
+        }
         playersContainer.appendChild(card);
       });
-      const done = Object.values(playersData).filter(p=>p.submitted).length;
-      votingStatus.textContent = done < Object.keys(playersData).length
-        ? `${done}/${Object.keys(playersData).length} soumis` : 'Tous soumis !';
+
+      const done = Object.values(playersData).filter(p => p.submitted).length;
+      const total = Object.keys(playersData).length;
+      votingStatus.textContent = done < total ? `${done}/${total} soumis` : 'Tous soumis !';
+
+      // Show play all button to all when done
+      if (done === total && !voteCompleted) {
+        playAllBtn.style.display = 'inline-block';
+      }
     }
 
+    // Render scoreboard
     function renderScoreboard() {
       scoreList.innerHTML = '';
-      Object.entries(scores).sort((a,b)=>b[1]-a[1]).forEach(([name,pts])=>{
-        const li = document.createElement('li');
-        li.innerHTML = `<strong>${name}</strong>: ${pts} pt${pts>1?'s':''}`;
-        scoreList.appendChild(li);
-      });
+      Object.entries(scores)
+        .sort((a, b) => b[1] - a[1])
+        .forEach(([name, pts]) => {
+          const li = document.createElement('li');
+          li.innerHTML = `<strong>${name}</strong>: ${pts} pt${pts > 1 ? 's' : ''}`;
+          scoreList.appendChild(li);
+        });
       scoreboard.style.display = 'block';
     }
 
+    // Button handlers
     recordBtn.onclick = () => {
       if (!recorder) return;
       recordedChunks = [];
-      if (recorder.state==='inactive') recorder.start(); else recorder.stop();
+      recorder.state === 'inactive' ? recorder.start() : recorder.stop();
     };
-    playBtn.onclick = () => { if(mediaURL) new Audio(mediaURL).play(); };
-    submitBtn.onclick = () => { submitBtn.disabled=true; socket.emit('submit',{name:nameInput.value.trim(),url:mediaURL}); };
+    playBtn.onclick = () => mediaURL && new Audio(mediaURL).play();
+    submitBtn.onclick = () => {
+      submitBtn.disabled = true;
+      socket.emit('submit', { name: nameInput.value.trim(), url: mediaURL });
+    };
     showOriginalBtn.onclick = () => {
-      let url,type; if(originalAudio.style.display==='block'){url=originalAudio.src;type='audio';}
-      else{url=videoPlayer.src;type='video';}
-      socket.emit('playPlayback',{url,type});
+      let url, type;
+      if (originalAudio.style.display === 'block') {
+        url = originalAudio.src; type = 'audio';
+      } else {
+        url = videoPlayer.src; type = 'video';
+      }
+      socket.emit('playPlayback', { url, type });
     };
     playAllBtn.onclick = () => socket.emit('playAllImitations');
-    endRoundBtn.onclick = () => { endRoundBtn.style.display='none'; socket.emit('endRound'); };
+    endRoundBtn.onclick = () => {
+      endRoundBtn.style.display = 'none';
+      socket.emit('endRound');
+    };
     nextRoundBtn.onclick = () => socket.emit('start');
 
-    navigator.mediaDevices.getUserMedia({audio:true})
-      .then(stream=>{
+    // MediaRecorder init
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then(stream => {
         recorder = new MediaRecorder(stream);
-        recorder.onstart = ()=>{ recIndicator.classList.add('active'); initVisualizer(); recordBtn.textContent='⏹ Arrêter'; visualizerInterval=setInterval(animateBars,200); };
-        recorder.onstop = ()=>{ clearInterval(visualizerInterval); recIndicator.classList.remove('active'); recordBtn.textContent='⏺ Enregistrer'; const blob=new Blob(recordedChunks,{type:'audio/webm'}); mediaURL=URL.createObjectURL(blob); playBtn.disabled=false; submitBtn.disabled=false; };
-        recorder.ondataavailable = e=>recordedChunks.push(e.data);
-      }).catch(err=>alert('Micro inaccessible: '+err.message));
+        recorder.onstart = () => {
+          recIndicator.classList.add('active');
+          initVisualizer();
+          recordBtn.textContent = '⏹ Arrêter';
+          visualizerInterval = setInterval(animateBars, 200);
+        };
+        recorder.onstop = () => {
+          clearInterval(visualizerInterval);
+          recIndicator.classList.remove('active');
+          recordBtn.textContent = '⏺ Enregistrer';
+          const blob = new Blob(recordedChunks, { type: 'audio/webm' });
+          mediaURL = URL.createObjectURL(blob);
+          playBtn.disabled = false;
+          submitBtn.disabled = false;
+        };
+        recorder.ondataavailable = e => recordedChunks.push(e.data);
+      })
+      .catch(err => alert('Micro inaccessible : ' + err.message));
 
+    // SocketIO
     joinBtn.onclick = () => {
-      const name = nameInput.value.trim(); if(!name) return alert('Entre un pseudo !');
-      joinScreen.style.display='none'; game.style.display='block';
-      socket = io(); const room = location.pathname.split('/').pop(); socket.emit('join',{room,name});
-      socket.on('isHost',flag=>{isHost=flag; playAllBtn.style.display='none'; endRoundBtn.style.display='none'; nextRoundBtn.style.display='none';});
-      socket.on('mediaLibrary',lib=>{mediaLibrary=lib; renderMediaList(); loadMedia(0);});
-      socket.on('players',players=>{playersData=players; Object.keys(players).forEach(n=>scores[n]=scores[n]||0); renderPlayers(); renderScoreboard(); if(isHost&&Object.values(playersData).filter(p=>p.submitted).length===Object.keys(playersData).length) playAllBtn.style.display='inline-block';});
-      socket.on('playPlayback',({url,type})=>{if(type==='audio')new Audio(url).play();else{videoPlayer.src=url;videoPlayer.muted=true;videoPlayer.play();}});
-      socket.on('roundEnded',({winnerName,players})=>{scores[winnerName]++; renderScoreboard(); document.getElementById('winner-name').textContent=winnerName; document.getElementById('winner-votes').textContent=players[winnerName].votes; winnerAudio.src=players[winnerName].audio; winnerAudio.style.display='block'; resultsSection.style.display='block'; nextRoundBtn.style.display='inline-block';});
-      socket.on('playAllImitations',players=>{const urls=Object.values(players).filter(p=>p.submitted).map(p=>p.audio);let i=0;function n(){if(i>=urls.length)return;const a=new Audio(urls[i++]);a.onended=n;a.play();}n();});
-      socket.on('start',()=>{voteCompleted=false; hasVoted=false; resultsSection.style.display='none'; nextRoundBtn.style.display='none'; playAllBtn.style.display='none'; playBtn.disabled=true; submitBtn.disabled=true;});
+      const name = nameInput.value.trim();
+      if (!name) return alert('Entre un pseudo !');
+      joinScreen.style.display = 'none';
+      game.style.display = 'block';
+
+      socket = io();
+      const room = location.pathname.split('/').pop();
+      socket.emit('join', { room, name });
+
+      socket.on('mediaLibrary', lib => {
+        mediaLibrary = lib;
+        renderMediaList();
+        loadMedia(0);
+      });
+
+      socket.on('players', players => {
+        playersData = players;
+        Object.keys(players).forEach(n => { scores[n] = scores[n] || 0; });
+        renderPlayers();
+        renderScoreboard();
+      });
+
+      socket.on('playPlayback', ({ url, type }) => {
+        if (type === 'audio') new Audio(url).play();
+        else {
+          videoPlayer.src = url;
+          videoPlayer.muted = true;
+          videoPlayer.play();
+        }
+      });
+
+      socket.on('roundEnded', ({ winnerName, players }) => {
+        voteCompleted = true;
+        scores[winnerName] += 1;
+        renderScoreboard();
+
+        winnerName.textContent = winnerName;
+        winnerVotes.textContent = players[winnerName].votes;
+        winnerAudio.src = players[winnerName].audio;
+        winnerAudio.style.display = 'block';
+        resultsSection.style.display = 'block';
+      });
+
+      socket.on('playAllImitations', players => {
+        const urls = Object.values(players)
+          .filter(p => p.submitted)
+          .map(p => p.audio);
+        let i = 0;
+        function next() {
+          if (i >= urls.length) return;
+          const a = new Audio(urls[i++]);
+          a.onended = next;
+          a.play();
+        }
+        next();
+      });
+
+      socket.on('start', () => {
+        voteCompleted = false;
+        hasVoted = false;
+        resultsSection.style.display = 'none';
+        nextRoundBtn.style.display = 'none';
+        playAllBtn.style.display = 'none';
+        playBtn.disabled = true;
+        submitBtn.disabled = true;
+      });
     };
   });
-  </script>
+</script>
 </body>
 </html>
