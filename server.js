@@ -3,6 +3,12 @@ import http from 'http';
 import { Server } from 'socket.io';
 import { nanoid } from 'nanoid';
 import path from 'path';
+import { fileURLToPath } from 'url';
+
+// ==== Recalcule __dirname en module ES ====
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 
 const app = express();
 const server = http.createServer(app);
