@@ -148,256 +148,286 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script>
-  document.addEventListener('DOMContentLoaded', () => {
-    // ==== Références DOM ====
-    const joinScreen       = document.getElementById('join-screen');
-    const game             = document.getElementById('game');
-    const joinBtn          = document.getElementById('join-btn');
-    const nameInput        = document.getElementById('name-input');
-    const recordBtn        = document.getElementById('recordBtn');
-    const playBtn          = document.getElementById('playBtn');
-    const submitBtn        = document.getElementById('submitBtn');
-    const visualizer       = document.getElementById('visualizer');
-    const recIndicator     = document.getElementById('recIndicator');
-    const timerElem        = document.getElementById('timer');
-    const mediaTitle       = document.getElementById('media-title');
-    const originalAudio    = document.getElementById('original-audio');
-    const videoPlayer      = document.getElementById('video-player');
-    const mediaList        = document.getElementById('media-list');
-    const playersContainer = document.getElementById('players-container');
-    const votingStatus     = document.getElementById('voting-status');
-    const showOriginalBtn  = document.getElementById('showOriginalBtn');
-    const endRoundBtn      = document.getElementById('endRoundBtn');
-    const replayBtn        = document.getElementById('replayBtn');
-    const nextRoundBtn     = document.getElementById('nextRoundBtn');
-    const resultsSection   = document.getElementById('results-section');
-    const winnerName       = document.getElementById('winner-name');
-    const winnerVotes      = document.getElementById('winner-votes');
-    const winnerAudio      = document.getElementById('winner-audio');
-    const scoreList        = document.getElementById('score-list');
-    const scoreboard       = document.getElementById('scoreboard');
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // ==== DOM ====
+  const joinScreen       = document.getElementById('join-screen');
+  const game             = document.getElementById('game');
+  const joinBtn          = document.getElementById('join-btn');
+  const nameInput        = document.getElementById('name-input');
+  const recordBtn        = document.getElementById('recordBtn');
+  const playBtn          = document.getElementById('playBtn');
+  const submitBtn        = document.getElementById('submitBtn');
+  const visualizer       = document.getElementById('visualizer');
+  const recIndicator     = document.getElementById('recIndicator');
+  const timerElem        = document.getElementById('timer');
+  const mediaTitle       = document.getElementById('media-title');
+  const originalAudio    = document.getElementById('original-audio');
+  const videoPlayer      = document.getElementById('video-player');
+  const mediaList        = document.getElementById('media-list');
+  const playersContainer = document.getElementById('players-container');
+  const votingStatus     = document.getElementById('voting-status');
+  const showOriginalBtn  = document.getElementById('showOriginalBtn');
+  const endRoundBtn      = document.getElementById('endRoundBtn');
+  const replayBtn        = document.getElementById('replayBtn');
+  const nextRoundBtn     = document.getElementById('nextRoundBtn');
+  const resultsSection   = document.getElementById('results-section');
+  const winnerName       = document.getElementById('winner-name');
+  const winnerVotes      = document.getElementById('winner-votes');
+  const winnerAudio      = document.getElementById('winner-audio');
+  const scoreList        = document.getElementById('score-list');
+  const scoreboard       = document.getElementById('scoreboard');
 
-    // ==== État Client ====
-    let socket, recorder;
-    let recordedChunks = [];
-    let mediaURL;
-    let mediaLibrary = [];
-    let playersData = {};
-    let isHost = false;
-    let voteCompleted = false;
-    let scores = {};
+  // ==== État ====
+  let socket;
+  let recorder, recordedChunks = [], mediaURL;
+  let mediaLibrary = [];
+  let playersData = {};
+  let isHost = false;
+  let hasVoted = false;
+  let voteCompleted = false;
+  let scores = {};
 
-    // ==== Fonctions utilitaires ====
-    function initVisualizer() {
-      visualizer.innerHTML = '';
-      for (let i=0; i<50; i++) {
-        const bar = document.createElement('div');
-        bar.className = 'visualizer-bar';
-        bar.style.height = '20px';
-        visualizer.appendChild(bar);
-      }
+  // ==== Visualizer ====
+  function initVisualizer() {
+    visualizer.innerHTML = '';
+    for (let i = 0; i < 50; i++) {
+      const bar = document.createElement('div');
+      bar.className = 'visualizer-bar';
+      bar.style.height = '20px';
+      visualizer.appendChild(bar);
     }
-    function animateBars() {
-      visualizer.querySelectorAll('.visualizer-bar').forEach(bar => {
-        bar.style.height = `${Math.random() * 80 + 20}px`;
-      });
-    }
+  }
+  function animateBars() {
+    visualizer.querySelectorAll('.visualizer-bar').forEach(bar => {
+      bar.style.height = `${Math.random()*80 + 20}px`;
+    });
+  }
 
-    // Affiche la liste des médias pour l’hôte
-    function renderMediaList() {
-      mediaList.innerHTML = '';
-      mediaLibrary.forEach((m,i) => {
-        const btn = document.createElement('button');
-        btn.className = 'btn btn-secondary';
-        btn.textContent = m.title;
-        btn.onclick = () => loadMedia(i);
-        mediaList.appendChild(btn);
-      });
+  // ==== Affichage médias ====
+  function renderMediaList() {
+    mediaList.innerHTML = '';
+    mediaLibrary.forEach((m,i) => {
+      const btn = document.createElement('button');
+      btn.className = 'btn btn-secondary';
+      btn.textContent = m.title;
+      btn.onclick = () => loadMedia(i);
+      mediaList.appendChild(btn);
+    });
+  }
+  function loadMedia(i) {
+    const m = mediaLibrary[i];
+    mediaTitle.textContent = m.title;
+    if (m.type === 'audio') {
+      originalAudio.src = m.source;
+      originalAudio.style.display = 'block';
+      videoPlayer.style.display = 'none';
+    } else {
+      videoPlayer.src = m.source;
+      videoPlayer.style.display = 'block';
+      originalAudio.style.display = 'none';
     }
-    function loadMedia(i) {
-      const m = mediaLibrary[i];
-      mediaTitle.textContent = m.title;
-      if (m.type === 'audio') {
-        originalAudio.src = m.source; originalAudio.style.display = 'block';
-        videoPlayer.style.display = 'none';
-      } else {
-        videoPlayer.src = m.source; videoPlayer.style.display = 'block';
-        originalAudio.style.display = 'none';
-      }
-    }
+    // Réinitialise les contrôles
+    playBtn.disabled = true;
+    submitBtn.disabled = true;
+  }
 
-    // Affiche les joueurs + contrôle du vote
-    function renderPlayers() {
-      playersContainer.innerHTML = '';
-      Object.entries(playersData).forEach(([name, p]) => {
-        const card = document.createElement('div');
-        card.className = 'player-card';
-        let html = `
-          <div class="player-avatar"><i class="fas fa-user"></i></div>
-          <div class="player-name">${name}</div>
-          <div class="player-status">${p.submitted ? '✅ Soumis' : '⏳ En attente'}</div>
+  // ==== Affichage joueurs & vote ====
+  function renderPlayers() {
+    playersContainer.innerHTML = '';
+    Object.entries(playersData).forEach(([name, p]) => {
+      const card = document.createElement('div');
+      card.className = 'player-card';
+      let html = `
+        <div class="player-avatar"><i class="fas fa-user"></i></div>
+        <div class="player-name">${name}</div>
+        <div class="player-status">${p.submitted ? '✅ Soumis' : '⏳ En attente'}</div>
+      `;
+      if (p.submitted) {
+        html += `
+          <audio controls src="${p.audio}" style="width:100%;margin:10px 0;"></audio>
         `;
-        if (p.submitted) {
-          html += `
-            <audio controls src="${p.audio}" style="width:100%;margin:10px 0;"></audio>
-            ${!voteCompleted ? '<button class="btn btn-secondary vote-btn">Voter</button>' : ''}
-          `;
+        if (!voteCompleted && !hasVoted && name !== nameInput.value.trim()) {
+          html += `<button class="btn btn-secondary vote-btn">Voter</button>`;
         }
-        card.innerHTML = html;
-        if (p.submitted && !voteCompleted) {
-          card.querySelector('.vote-btn').onclick = () => {
-            socket.emit('vote', name);
-          };
-        }
-        playersContainer.appendChild(card);
-      });
-      // Statut global
-      const done = Object.values(playersData).filter(p=>p.submitted).length;
-      votingStatus.textContent = done < Object.keys(playersData).length
-        ? `${done}/${Object.keys(playersData).length} soumis`
-        : 'Tous soumis !';
-      // Afficher bouton “Terminer la manche” à l’hôte
-      if (isHost && done === Object.keys(playersData).length && !voteCompleted) {
-        endRoundBtn.style.display = 'inline-block';
       }
-    }
+      card.innerHTML = html;
+      if (p.submitted && !voteCompleted && !hasVoted && name !== nameInput.value.trim()) {
+        card.querySelector('.vote-btn').onclick = () => {
+          hasVoted = true;
+          socket.emit('vote', name);
+        };
+      }
+      playersContainer.appendChild(card);
+    });
 
-    // Affiche et trie le scoreboard
-    function renderScoreboard() {
-      scoreList.innerHTML = '';
-      Object.entries(scores)
-        .sort((a,b)=>b[1]-a[1])
-        .forEach(([name,pts])=>{
-          const li = document.createElement('li');
-          li.innerHTML = `<strong>${name}</strong>: ${pts} pt${pts>1?'s':''}`;
-          scoreList.appendChild(li);
-        });
-      scoreboard.style.display = 'block';
-    }
+    // Statut global
+    const done = Object.values(playersData).filter(p => p.submitted).length;
+    votingStatus.textContent = done < Object.keys(playersData).length
+      ? `${done}/${Object.keys(playersData).length} soumis`
+      : 'Tous soumis !';
 
-    // ==== Handlers des boutons ====
-    recordBtn.onclick = () => {
-      if (!recorder) return;
-      recordedChunks = [];
-      if (recorder.state==='inactive') recorder.start();
-      else recorder.stop();
-    };
-    playBtn.onclick = () => { if(mediaURL) new Audio(mediaURL).play(); };
-    submitBtn.onclick = () => {
-      socket.emit('submit',{ name:nameInput.value.trim(), url:mediaURL });
-      submitBtn.disabled = true;
-    };
-    showOriginalBtn.onclick = ()=>{
-      let url,type;
-      if(originalAudio.style.display==='block'){ url=originalAudio.src; type='audio'; }
-      else { url=videoPlayer.src; type='video'; }
-      socket.emit('playPlayback',{url,type});
-    };
-    endRoundBtn.onclick = ()=>{
-      socket.emit('endRound');
+    // Bouton “Terminer la manche” pour l’hôte
+    if (isHost && done === Object.keys(playersData).length && !voteCompleted) {
+      endRoundBtn.style.display = 'inline-block';
+    }
+  }
+
+  // ==== Scoreboard ====
+  function renderScoreboard() {
+    scoreList.innerHTML = '';
+    Object.entries(scores)
+      .sort((a,b) => b[1] - a[1])
+      .forEach(([name,pts]) => {
+        const li = document.createElement('li');
+        li.innerHTML = `<strong>${name}</strong>: ${pts} pt${pts>1?'s':''}`;
+        scoreList.appendChild(li);
+      });
+    scoreboard.style.display = 'block';
+  }
+
+  // ==== Boutons UI ====
+  recordBtn.onclick = () => {
+    if (!recorder) return;
+    recordedChunks = [];
+    if (recorder.state === 'inactive') recorder.start();
+    else recorder.stop();
+  };
+  playBtn.onclick = () => { if(mediaURL) new Audio(mediaURL).play(); };
+  submitBtn.onclick = () => {
+    submitBtn.disabled = true;
+    socket.emit('submit',{ name:nameInput.value.trim(), url:mediaURL });
+  };
+  showOriginalBtn.onclick = () => {
+    let url,type;
+    if (originalAudio.style.display==='block') { url=originalAudio.src; type='audio'; }
+    else { url=videoPlayer.src; type='video'; }
+    socket.emit('playPlayback',{ url, type });
+  };
+  endRoundBtn.onclick = () => {
+    endRoundBtn.style.display = 'none';
+    socket.emit('endRound');
+  };
+  replayBtn.onclick = () => socket.emit('playAllImitations');
+  nextRoundBtn.onclick = () => socket.emit('start');
+
+  // ==== MediaRecorder setup ====
+  navigator.mediaDevices.getUserMedia({ audio:true })
+    .then(stream => {
+      recorder = new MediaRecorder(stream);
+      recorder.onstart = () => {
+        recIndicator.classList.add('active');
+        initVisualizer();
+        recordBtn.textContent = '⏹ Arrêter';
+        visualizerInterval = setInterval(animateBars,200);
+      };
+      recorder.onstop = () => {
+        clearInterval(visualizerInterval);
+        recIndicator.classList.remove('active');
+        recordBtn.textContent = '⏺ Enregistrer';
+        const blob = new Blob(recordedChunks,{ type:'audio/webm' });
+        mediaURL = URL.createObjectURL(blob);
+        playBtn.disabled = false;
+        submitBtn.disabled = false;
+      };
+      recorder.ondataavailable = e => recordedChunks.push(e.data);
+    })
+    .catch(err=>alert('Micro inaccessible : '+err.message));
+
+  // ==== Socket.IO ====
+  joinBtn.onclick = () => {
+    const name = nameInput.value.trim();
+    if (!name) return alert('Entre un pseudo !');
+    joinScreen.style.display = 'none';
+    game.style.display = 'block';
+
+    // Connexion
+    socket = io();
+    const room = location.pathname.split('/').pop();
+    socket.emit('join',{ room, name });
+
+    // Host?
+    socket.on('isHost', flag => {
+      isHost = flag;
+      replayBtn.style.display = 'none';     // caché par défaut
+      nextRoundBtn.style.display = 'none';
       endRoundBtn.style.display = 'none';
-    };
-    replayBtn.onclick = ()=> socket.emit('playAllImitations');
-    nextRoundBtn.onclick = ()=> socket.emit('start');
+    });
 
-    // ==== Initialisation MediaRecorder ====
-    navigator.mediaDevices.getUserMedia({audio:true})
-      .then(stream=>{
-        recorder = new MediaRecorder(stream);
-        recorder.onstart = ()=>{
-          recIndicator.classList.add('active');
-          initVisualizer();
-          recordBtn.textContent='⏹ Arrêter';
-          visualizerInterval = setInterval(animateBars,200);
-        };
-        recorder.onstop = ()=>{
-          clearInterval(visualizerInterval);
-          recIndicator.classList.remove('active');
-          recordBtn.textContent='⏺ Enregistrer';
-          const blob = new Blob(recordedChunks,{type:'audio/webm'});
-          mediaURL = URL.createObjectURL(blob);
-          playBtn.disabled = false;
-          submitBtn.disabled = false;
-        };
-        recorder.ondataavailable = e=> recordedChunks.push(e.data);
-      })
-      .catch(err=> alert('Micro inaccessible: '+err.message));
+    // Library
+    socket.on('mediaLibrary', lib => {
+      mediaLibrary = lib;
+      renderMediaList();
+      loadMedia(0);
+    });
 
-    // ==== Connexion Socket.IO & flux de jeu ====
-    joinBtn.onclick = ()=>{
-      const name = nameInput.value.trim();
-      if(!name) return alert('Entre un pseudo !');
-      joinScreen.style.display='none';
-      game.style.display='block';
+    // Players update
+    socket.on('players', players => {
+      playersData = players;
+      // init scores
+      Object.keys(players).forEach(n=>{ scores[n] = scores[n]||0; });
+      renderPlayers();
+      renderScoreboard();
+    });
 
-      socket = io();
-      const room = location.pathname.split('/').pop();
-      socket.emit('join',{room,name});
+    // Playback individuel
+    socket.on('playPlayback', ({url,type}) => {
+      if (type==='audio') new Audio(url).play();
+      else {
+        videoPlayer.src = url;
+        videoPlayer.muted = true;
+        videoPlayer.play();
+      }
+    });
 
-      socket.on('isHost', flag=>{
-        isHost=flag;
-      });
+    // Fin de manche + affichage résultat
+    socket.on('roundEnded', ({ winnerName, players }) => {
+      voteCompleted = true;
+      scores[winnerName] += 1;
+      renderScoreboard();
 
-      socket.on('mediaLibrary', lib=>{
-        mediaLibrary=lib; renderMediaList(); loadMedia(0);
-      });
+      document.getElementById('winner-name').textContent = winnerName;
+      document.getElementById('winner-votes').textContent = players[winnerName].votes;
+      winnerAudio.src = players[winnerName].audio;
+      winnerAudio.style.display = 'block';
+      resultsSection.style.display = 'block';
 
-      socket.on('players', players=>{
-        playersData=players;
-        // Init scores la première fois
-        Object.keys(players).forEach(n=>{ if(!(n in scores)) scores[n]=0; });
-        renderPlayers(); renderScoreboard();
-      });
+      // Host peut rejouer toutes les imitations
+      if (isHost) replayBtn.style.display = 'inline-block';
+      // Tout le monde peut passer à la suite
+      nextRoundBtn.style.display = 'inline-block';
+    });
 
-      socket.on('playPlayback', ({url,type})=>{
-        if(type==='audio') new Audio(url).play();
-        else { videoPlayer.src=url; videoPlayer.muted=true; videoPlayer.play(); }
-      });
+    // Lecture séquentielle de toutes les imitations
+    socket.on('playAllImitations', players => {
+      const urls = Object.values(players)
+        .filter(p=>p.submitted)
+        .map(p=>p.audio);
+      let i=0;
+      function next() {
+        if (i>=urls.length) return;
+        const a = new Audio(urls[i++]);
+        a.onended = next;
+        a.play();
+      }
+      next();
+    });
 
-      socket.on('roundEnded', ({winnerName,players})=>{
-        voteCompleted=true;
-        // Maj scores & UI résultats
-        scores[winnerName] = (scores[winnerName]||0)+1;
-        renderScoreboard();
-        document.getElementById('winner-name').textContent = winnerName;
-        document.getElementById('winner-votes').textContent = players[winnerName].votes;
-        document.getElementById('winner-audio').src = players[winnerName].audio;
-        document.getElementById('winner-audio').style.display='block';
-        resultsSection.style.display='block';
-        // Affiche le bouton “Rejouer imitations” pour l’hôte
-        if(isHost) replayBtn.style.display='inline-block';
-        // Affiche le bouton “Manche suivante” pour tous
-        nextRoundBtn.style.display='inline-block';
-      });
+    // Reset et manche suivante
+    socket.on('start', () => {
+      voteCompleted = false;
+      hasVoted = false;
+      resultsSection.style.display = 'none';
+      nextRoundBtn.style.display = 'none';
+      replayBtn.style.display = 'none';
+      endRoundBtn.style.display = 'none';
+      playBtn.disabled = true;
+      submitBtn.disabled = true;
+      // playersData sera mis à jour via 'players' event
+    });
+  };
+});
+</script>
 
-      socket.on('playAllImitations', players=>{
-        // Lecture séquentielle
-        const urls = Object.values(players)
-          .filter(p=>p.submitted)
-          .map(p=>p.audio);
-        let i=0;
-        function next(){
-          if(i>=urls.length) return;
-          const a=new Audio(urls[i++]);
-          a.onended=next;
-          a.play();
-        }
-        next();
-      });
-
-      socket.on('start', ()=>{
-        voteCompleted=false;
-        resultsSection.style.display='none';
-        nextRoundBtn.style.display='none';
-        replayBtn.style.display='none';
-        // Reset UI d’enregistrement
-        playBtn.disabled=true;
-        submitBtn.disabled=true;
-        // Reset players coté client (sera renvoyé par le serveur)
-      });
-    };
-  });
-  </script>
 </body>
 </html>
