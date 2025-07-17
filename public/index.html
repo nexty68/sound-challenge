@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sound Challenge - Jeu d'imitation sonore</title>
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&family=Righteous&display=swap"
+        rel="stylesheet"/>
+  <style>
+    /* ====== CSS PRINCIPAL ====== */
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family:'Poppins',sans-serif;
+      background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);
+      color:#fff; min-height:100vh; overflow-x:hidden; padding:20px;
+    }
+    .container { max-width:1200px; margin:0 auto; }
+    header { text-align:center; padding:30px 0; animation:fadeIn 1s ease-out; }
+    .logo {
+      font-family:'Righteous',cursive; font-size:3.5rem;
+      background:linear-gradient(45deg,#ff6b6b,#4ecdc4);
+      -webkit-background-clip:text; background-clip:text; color:transparent;
+      margin-bottom:10px; text-shadow:0 5px 15px rgba(0,0,0,0.2);
+    }
+    .subtitle { font-size:1.2rem; opacity:.8; margin-bottom:30px; }
+
+    .current-media,
+    .recorder-section,
+    .voting-section,
+    .results-section,
+    .media-manager,
+    .instructions,
+    #scoreboard {
+      background:rgba(255,255,255,0.05);
+      border-radius:20px; padding:25px;
+      box-shadow:0 10px 30px rgba(0,0,0,0.3);
+      backdrop-filter:blur(10px); border:1px solid rgba(255,255,255,0.1);
+      margin-top:20px;
+    }
+    .section-title {
+      font-size:1.8rem; margin-bottom:20px; color:#4ecdc4;
+      display:flex; align-items:center; gap:10px;
+    }
+    .section-title i {
+      background:linear-gradient(45deg,#ff6b6b,#4ecdc4);
+      -webkit-background-clip:text; background-clip:text; color:transparent;
+    }
+    .media-container { display:flex; flex-direction:column; align-items:center; gap:20px; }
+    .media-player { width:100%; max-width:800px; background:rgba(0,0,0,0.2);
+      border-radius:15px; padding:20px; margin-top:20px;
+    }
+    .player-title { text-align:center; margin-bottom:15px; color:#ff6b6b;
+      font-weight:600; font-size:1.5rem;
+    }
+    .sound-visualizer { height:100px; margin:30px 0; background:rgba(0,0,0,0.2);
+      border-radius:10px; display:flex; align-items:flex-end; padding:10px;
+    }
+    .visualizer-bar { width:8px; background:#4ecdc4; margin:0 2px;
+      border-radius:4px; transition:height .2s ease;
+    }
+    .recording-indicator { display:flex; align-items:center; gap:10px;
+      margin:20px 0; opacity:0; transition:opacity .3s ease;
+    }
+    .recording-indicator.active { opacity:1; }
+    .pulse { width:15px; height:15px; background:#ff6b6b; border-radius:50%;
+      animation:pulse 1.5s infinite;
+    }
+    .timer { font-size:1.2rem; font-weight:600; }
+    .controls { display:flex; gap:15px; margin-top:20px; flex-wrap:wrap;
+      justify-content:center;
+    }
+    .btn {
+      padding:12px 25px; border:none; border-radius:50px; font-weight:600;
+      cursor:pointer; display:flex; align-items:center; gap:8px;
+      transition:all .3s ease; font-size:1rem;
+    }
+    .btn-primary { background:linear-gradient(45deg,#ff6b6b,#ff8e53);
+      color:#fff; box-shadow:0 5px 15px rgba(255,107,107,0.4);
+    }
+    .btn-primary:hover { transform:translateY(-3px);
+      box-shadow:0 8px 20px rgba(255,107,107,0.6);
+    }
+    .btn-secondary { background:rgba(255,255,255,0.1); color:#fff;
+      border:1px solid rgba(255,255,255,0.2);
+    }
+    .btn-secondary:hover { background:rgba(255,255,255,0.2); }
+    .btn-large { padding:15px 35px; font-size:1.2rem; }
+
+    .players-container { display:flex; flex-wrap:wrap; gap:20px; justify-content:center; }
+    .player-card {
+      background:rgba(0,0,0,0.2); border-radius:15px; padding:20px;
+      width:200px; text-align:center; transition:transform .3s ease;
+    }
+    .player-card:hover { transform:translateY(-5px); background:rgba(255,255,255,0.1); }
+    .player-avatar {
+      width:80px; height:80px; border-radius:50%;
+      background:linear-gradient(45deg,#ff6b6b,#4ecdc4);
+      margin:0 auto 15px; display:flex; align-items:center;
+      justify-content:center; font-size:2rem;
+    }
+    .player-name { font-size:1.2rem; font-weight:600; margin-bottom:10px; }
+    .player-status { font-size:.9rem; color:#ff6b6b; margin-bottom:10px; }
+    .vote-btn { background:rgba(78,205,196,0.2); color:#fff;
+      border:1px solid #4ecdc4; border-radius:20px; padding:5px 15px;
+      cursor:pointer; transition:all .3s ease;
+    }
+    .vote-btn:hover { background:rgba(78,205,196,0.4); }
+    .vote-btn.voted { background:#4ecdc4; color:#16213e; }
+
+    .results-section { display:none; }
+    .winner-card {
+      background:rgba(78,205,196,0.15); border-radius:15px; padding:30px;
+      text-align:center; border:2px solid #4ecdc4; max-width:600px;
+      margin:20px auto;
+    }
+    .winner-title { font-size:2rem; color:#ff6b6b; margin-bottom:20px; }
+    .winner-name {
+      font-size:2.5rem; background:linear-gradient(45deg,#ff6b6b,#4ecdc4);
+      -webkit-background-clip:text; background-clip:text; color:transparent;
+      margin:10px 0;
+    }
+    .winner-avatar {
+      width:120px; height:120px; border-radius:50%;
+      background:linear-gradient(45deg,#ff6b6b,#4ecdc4);
+      margin:20px auto; display:flex; align-items:center;
+      justify-content:center; font-size:3rem;
+    }
+
+    /* Scoreboard caché par défaut */
+    #scoreboard { display:none; }
+    #score-list { list-style:none; padding-left:0; }
+    #score-list li { margin-bottom:8px; }
+
+    /* Vidéo agrandie */
+    .media-player iframe,
+    .media-player video {
+      width:100%; max-width:1000px; height:500px; border-radius:15px;
+    }
+
+    @keyframes fadeIn { from{opacity:0;transform:translateY(20px);} to{opacity:1;} }
+    @keyframes pulse {0%{transform:scale(1);}50%{transform:scale(1.3);}100%{transform:scale(1);}}
+    @media(max-width:768px){
+      .logo{font-size:2.5rem;} .player-card{width:100%;} .btn-large{padding:12px 25px;font-size:1rem;}
+    }
+  </style>
+</head>
+<body>
+  <!-- Overlay pseudo -->
+  <div id="join-screen" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;z-index:999;">
+    <div style="background:#16213e;padding:30px;border-radius:8px;text-align:center;">
+      <h2 style="color:#fff;margin-bottom:15px;">Choisis ton pseudo</h2>
+      <input id="name-input" placeholder="Ton pseudo" style="margin-bottom:15px;padding:8px;border-radius:4px;border:1px solid #4ecdc4;width:200px;display:block;margin:auto;"/>
+      <button id="join-btn" class="btn btn-primary">Entrer</button>
+    </div>
+  </div>
+
+  <!-- Jeu -->
+  <div id="game" style="display:none;">
+    <div class="container">
+      <header>
+        <h1 class="logo">Sound Challenge</h1>
+        <p class="subtitle">Le jeu d'imitation sonore multi-joueurs pour streamers</p>
+      </header>
+
+      <!-- Scoreboard -->
+      <div id="scoreboard">
+        <h2 class="section-title"><i class="fas fa-list-ol"></i> Scoreboard</h2>
+        <ul id="score-list"></ul>
+      </div>
+
+      <div class="game-area">
+        <!-- Média à imiter -->
+        <div class="current-media">
+          <h2 class="section-title"><i class="fas fa-play-circle"></i> Média à imiter</h2>
+          <div class="media-container">
+            <div class="player-title" id="media-title">—</div>
+            <audio id="original-audio" controls style="display:none;width:100%;"></audio>
+            <iframe id="video-player" frameborder="0" style="display:none;" allowfullscreen></iframe>
+          </div>
+        </div>
+
+        <!-- Enregistrement -->
+        <div class="recorder-section">
+          <h2 class="section-title"><i class="fas fa-microphone-alt"></i> Ton imitation</h2>
+          <div class="sound-visualizer" id="visualizer"></div>
+          <div class="recording-indicator" id="recIndicator">
+            <div class="pulse"></div>
+            <div class="timer" id="timer">00:05</div>
+          </div>
+          <div class="controls">
+            <button id="recordBtn" class="btn btn-primary btn-large">⏺ Enregistrer</button>
+            <button id="playBtn" class="btn btn-secondary" disabled>▶ Écouter</button>
+            <button id="submitBtn" class="btn btn-secondary" disabled>✉ Soumettre</button>
+          </div>
+        </div>
+
+        <!-- Vote -->
+        <div class="voting-section">
+          <h2 class="section-title"><i class="fas fa-vote-yea"></i> Vote pour le meilleur imitateur</h2>
+          <p id="voting-status">En attente des soumissions...</p>
+          <div id="players-container" class="players-container"></div>
+          <div class="controls" style="margin-top:30px;">
+            <button id="showOriginalBtn" class="btn btn-primary">🔁 Réécouter original</button>
+            <button id="nextRoundBtn" class="btn btn-primary">⏭ Manche suivante</button>
+          </div>
+        </div>
+
+        <!-- Résultats -->
+        <div id="results-section" class="results-section">
+          <h2 class="section-title"><i class="fas fa-trophy"></i> Résultats</h2>
+          <div class="winner-card">
+            <div class="winner-title">Le gagnant est :</div>
+            <div class="winner-avatar"><i class="fas fa-crown"></i></div>
+            <div class="winner-name" id="winner-name">—</div>
+            <p>avec <span id="winner-votes">0</span> vote(s)</p>
+            <audio id="winner-audio" controls style="display:none;width:100%;margin-top:20px;"></audio>
+          </div>
+        </div>
+      </div>
+
+      <!-- Gestion des médias -->
+      <div class="media-manager">
+        <h2 class="section-title"><i class="fas fa-music"></i> Gestion des médias</h2>
+        <div id="media-list" class="media-list"></div>
+      </div>
+
+      <div class="instructions">
+        <h3><i class="fas fa-info-circle"></i> Comment ajouter des médias</h3>
+        <p>Dépose tes MP3/WAV/MP4 dans <code>public/media/</code></p>
+      </div>
+
+      <footer><p style="text-align:center; margin-top:40px;">© 2025 Sound Challenge</p></footer>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+  document.addEventListener('DOMContentLoaded', () => {
+    // Références DOM
+    const joinScreen       = document.getElementById('join-screen');
+    const game             = document.getElementById('game');
+    const joinBtn          = document.getElementById('join-btn');
+    const nameInput        = document.getElementById('name-input');
+    const recordBtn        = document.getElementById('recordBtn');
+    const playBtn          = document.getElementById('playBtn');
+    const submitBtn        = document.getElementById('submitBtn');
+    const visualizer       = document.getElementById('visualizer');
+    const recIndicator     = document.getElementById('recIndicator');
+    const timerElem        = document.getElementById('timer');
+    const mediaTitle       = document.getElementById('media-title');
+    const originalAudio    = document.getElementById('original-audio');
+    const videoPlayer      = document.getElementById('video-player');
+    const mediaList        = document.getElementById('media-list');
+    const playersContainer = document.getElementById('players-container');
+    const votingStatus     = document.getElementById('voting-status');
+    const showOriginalBtn  = document.getElementById('showOriginalBtn');
+    const nextRoundBtn     = document.getElementById('nextRoundBtn');
+    const resultsSection   = document.getElementById('results-section');
+    const winnerName       = document.getElementById('winner-name');
+    const winnerVotes      = document.getElementById('winner-votes');
+    const winnerAudio      = document.getElementById('winner-audio');
+    const scoreList        = document.getElementById('score-list');
+    const scoreboard       = document.getElementById('scoreboard');
+
+    let socket, recorder;
+    let recordedChunks = [];
+    let mediaURL;
+    let mediaLibrary = [];
+    let playersState = [];
+    let visualizerInterval;
+    let voteCompleted = false;
+    let currentMediaIndex = 0;
+    let scores = {};
+
+    // --- Gestion de la library médias ---
+    function renderMediaList() {
+      mediaList.innerHTML = '';
+      mediaLibrary.forEach((m,i) => {
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-secondary';
+        btn.textContent = m.title;
+        btn.onclick = () => { currentMediaIndex = i; loadMedia(i); };
+        mediaList.appendChild(btn);
+      });
+    }
+    function loadMedia(i) {
+      const m = mediaLibrary[i];
+      mediaTitle.textContent = m.title;
+      if (m.type === 'audio') {
+        originalAudio.src = m.source;
+        originalAudio.style.display = 'block';
+        videoPlayer.style.display = 'none';
+      } else {
+        videoPlayer.src = m.source;
+        videoPlayer.style.display = 'block';
+        originalAudio.style.display = 'none';
+      }
+    }
+
+    // --- Scoreboard ---
+    function renderScoreboard() {
+      scoreList.innerHTML = '';
+      Object.entries(scores)
+        .sort((a,b) => b[1] - a[1])
+        .forEach(([name,pts]) => {
+          const li = document.createElement('li');
+          li.innerHTML = `<strong>${name}</strong>: ${pts} point${pts>1?'s':''}`;
+          scoreList.appendChild(li);
+        });
+      scoreboard.style.display = 'block';
+    }
+
+    // --- Visualizer ---
+    function initVisualizer() {
+      visualizer.innerHTML = '';
+      for (let j=0;j<50;j++){
+        const bar = document.createElement('div');
+        bar.className = 'visualizer-bar';
+        bar.style.height = '20px';
+        visualizer.appendChild(bar);
+      }
+    }
+    function animateBars() {
+      visualizer.querySelectorAll('.visualizer-bar').forEach(bar => {
+        bar.style.height = `${Math.random()*80+20}px`;
+      });
+    }
+
+    // --- MediaRecorder ---
+    navigator.mediaDevices.getUserMedia({ audio:true })
+      .then(stream => {
+        recorder = new MediaRecorder(stream);
+        recorder.onstart = () => {
+          recIndicator.classList.add('active');
+          initVisualizer();
+          visualizerInterval = setInterval(animateBars,200);
+          recordBtn.textContent = '⏹ Arrêter';
+          playBtn.disabled = true;
+          submitBtn.disabled = true;
+        };
+        recorder.ondataavailable = e => recordedChunks.push(e.data);
+        recorder.onstop = () => {
+          clearInterval(visualizerInterval);
+          recIndicator.classList.remove('active');
+          const blob = new Blob(recordedChunks,{type:'audio/webm'});
+          mediaURL = URL.createObjectURL(blob);
+          playBtn.disabled = false;
+          submitBtn.disabled = false;
+          recordBtn.textContent = '⏺ Enregistrer';
+        };
+      })
+      .catch(err => alert('Micro inaccessible : '+err.message));
+
+    recordBtn.onclick = () => {
+      if (!recorder) return;
+      recordedChunks = [];
+      recorder.state === 'inactive' ? recorder.start() : recorder.stop();
+    };
+    playBtn.onclick = () => { if (mediaURL) new Audio(mediaURL).play(); };
+    submitBtn.onclick = () => {
+      if (!mediaURL) return;
+      socket.emit('submit', { name: nameInput.value.trim(), url: mediaURL });
+      submitBtn.disabled = true;
+    };
+
+    // --- Réécoute original synchronisée ---
+    showOriginalBtn.onclick = () => {
+      let url,type;
+      if (originalAudio.style.display === 'block') {
+        url = originalAudio.src; type = 'audio';
+      } else {
+        url = videoPlayer.src;    type = 'video';
+      }
+      socket.emit('playPlayback', { url, type });
+    };
+
+    // --- Manche suivante ---
+    nextRoundBtn.onclick = () => {
+      if (voteCompleted) socket.emit('start');
+    };
+
+    // --- Affichage des joueurs + scoring ---
+    function renderPlayers() {
+      playersContainer.innerHTML = '';
+      playersState.forEach(p => {
+        const card = document.createElement('div');
+        card.className = 'player-card';
+        let html = `
+          <div class="player-avatar"><i class="fas fa-user"></i></div>
+          <div class="player-name">${p.name}</div>
+          <div class="player-status">${p.submitted ? '✅ Soumis' : '⏳ En attente'}</div>
+        `;
+        if (p.submitted) {
+          html += `
+            <audio controls src="${p.audio}" style="width:100%; margin:10px 0;">
+              Votre navigateur ne supporte pas la lecture audio.
+            </audio>
+            ${!voteCompleted ? '<button class="btn btn-secondary vote-btn">Voter</button>' : ''}
+          `;
+        }
+        card.innerHTML = html;
+        if (p.submitted && !voteCompleted) {
+          card.querySelector('.vote-btn').onclick = () => {
+            socket.emit('vote', p.name);
+          };
+        }
+        playersContainer.appendChild(card);
+      });
+      const done = playersState.filter(x => x.submitted).length;
+      votingStatus.textContent = done < playersState.length
+        ? `${done}/${playersState.length} soumis`
+        : 'Tous soumis ! Votez ci-dessus';
+    }
+
+    // --- Connexion Socket.IO & flux de jeu ---
+    joinBtn.onclick = () => {
+      const name = nameInput.value.trim();
+      if (!name) return alert('Entre un pseudo !');
+      joinScreen.style.display = 'none';
+      game.style.display = 'block';
+
+      socket = io();
+      const room = location.pathname.split('/').pop();
+      socket.emit('join', { room, name });
+
+      socket.on('mediaLibrary', lib => {
+        mediaLibrary = lib;
+        renderMediaList();
+        currentMediaIndex = 0;
+        loadMedia(0);
+      });
+
+      socket.on('players', list => {
+        playersState = list.map(p => ({
+          ...p, submitted:false, votes:0, audio:null
+        }));
+        // initialisation des scores
+        list.forEach(p => {
+          if (!(p.name in scores)) scores[p.name] = 0;
+        });
+        renderPlayers();
+        renderScoreboard();
+      });
+
+      socket.on('submitted', ({ name:urlName, url }) => {
+        const p = playersState.find(x => x.name === urlName);
+        if (p) {
+          p.submitted = true;
+          p.audio = url;
+          renderPlayers();
+        }
+      });
+
+      socket.on('voted', votedName => {
+        // incrémente le score
+        scores[votedName] = (scores[votedName]||0) + 1;
+        voteCompleted = true;
+        renderPlayers();
+        renderScoreboard();
+
+        // affiche le gagnant
+        const winner = playersState.reduce(
+          (a,b) => (b.votes > a.votes ? b : a),
+          playersState[0]
+        );
+        winnerName.textContent = winner.name;
+        winnerVotes.textContent = scores[winner.name];
+        winnerAudio.src = winner.audio;
+        winnerAudio.style.display = 'block';
+        resultsSection.style.display = 'block';
+      });
+
+      socket.on('playPlayback', ({ url, type }) => {
+        if (type === 'audio') {
+          new Audio(url).play();
+        } else {
+          videoPlayer.src = url;
+          videoPlayer.muted = true;
+          videoPlayer.play();
+        }
+      });
+
+      socket.on('start', () => {
+        // reset joueurs
+        playersState.forEach(p => {
+          p.submitted = false;
+          p.votes = 0;
+          p.audio = null;
+        });
+        voteCompleted = false;
+        resultsSection.style.display = 'none';
+        playBtn.disabled = true;
+        submitBtn.disabled = true;
+        recordBtn.disabled = false;
+        // round suivant
+        currentMediaIndex = (currentMediaIndex+1) % mediaLibrary.length;
+        loadMedia(currentMediaIndex);
+        renderPlayers();
+      });
+    };
+  });
+  </script>
+</body>
+</html>
