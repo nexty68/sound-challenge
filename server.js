@@ -1,4 +1,3 @@
-// server.js
 import express from 'express';
 import http from 'http';
 import { Server } from 'socket.io';
@@ -7,128 +6,111 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 
-// ==== Recalcule __dirname en module ES ====
+// Recreate __dirname in ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, {
-  cors: { origin: '*' }
-});
+const io = new Server(server, { cors: { origin: '*' } });
 
-// Sert tous les fichiers statiques dans public/
 app.use(express.static(path.join(__dirname, 'public')));
-
-// Pour toutes les routes /room/... retourne index.html
 app.get('/room/:room', (req, res) => {
   res.sendFile(path.join(__dirname, 'public/index.html'));
 });
 
-// Structure de stockage en mémoire des rooms
-// rooms = { [roomId]: { host, mediaLibrary, players: { [name]: { submitted, votes, audio } } } }
+// Rooms store: { roomId: { host, mediaLibrary, players } }
 const rooms = {};
 
 io.on('connection', socket => {
-  // 1) Un client rejoint une room
   socket.on('join', ({ room, name }) => {
     socket.join(room);
     socket.data.room = room;
     socket.data.name = name;
 
-    // Crée la room si elle n'existe pas encore
+    // Initialize room
     if (!rooms[room]) {
-      // Scan du dossier public/media pour générer la mediaLibrary
       const mediaDir = path.join(__dirname, 'public', 'media');
       const files = fs.existsSync(mediaDir) ? fs.readdirSync(mediaDir) : [];
       const mediaLibrary = files.map(file => {
         const ext = path.extname(file).toLowerCase();
         const type = ext === '.mp4' ? 'video' : 'audio';
-        return {
-          id: nanoid(),
-          title: path.basename(file, ext),
-          type,
-          source: `/media/${file}`
-        };
+        return { id: nanoid(), title: path.basename(file, ext), type, source: `/media/${file}` };
       });
-
-      rooms[room] = {
-        host: name,
-        mediaLibrary,
-        players: {}
-      };
+      rooms[room] = { host: name, mediaLibrary, players: {} };
     }
 
-    // Ajoute le joueur dans la room
-    rooms[room].players[name] = {
-      submitted: false,
-      votes: 0,
-      audio: null
-    };
+    // Add player session
+    rooms[room].players[name] = { submitted: false, scores: { plus2: 0, plus1: 0, minus1: 0 }, audio: null };
 
-    // Envoie au client la mediaLibrary et l'état des joueurs
+    // Send initial data
     socket.emit('mediaLibrary', rooms[room].mediaLibrary);
     io.to(room).emit('players', rooms[room].players);
-
-    // Informe le client s'il est l'hôte
     socket.emit('isHost', name === rooms[room].host);
   });
 
-  // 2) Quand un joueur soumet son imitation
+  // Submit imitation
   socket.on('submit', ({ name, url }) => {
-    const room = socket.data.room;
-    if (!rooms[room]) return;
-    rooms[room].players[name].submitted = true;
-    rooms[room].players[name].audio = url;
-    io.to(room).emit('players', rooms[room].players);
+    const r = rooms[socket.data.room];
+    if (!r) return;
+    r.players[name].submitted = true;
+    r.players[name].audio = url;
+    io.to(socket.data.room).emit('players', r.players);
   });
 
-  // 3) Rejoue un media (original ou imitation) pour tous
+  // Play one media for all
   socket.on('playPlayback', ({ url, type }) => {
     io.to(socket.data.room).emit('playPlayback', { url, type });
   });
 
-  // 4) Un vote pour un joueur
-  socket.on('vote', votedName => {
-    const room = socket.data.room;
-    if (!rooms[room]) return;
-    rooms[room].players[votedName].votes++;
-    io.to(room).emit('players', rooms[room].players);
+  // Weighted vote: { name, weight }
+  socket.on('vote', ({ name, weight }) => {
+    const r = rooms[socket.data.room];
+    if (!r) return;
+    const p = r.players[name];
+    if (!p || p.votedBy?.includes(socket.data.name)) return;
+    // record vote per voter
+    p.scores = p.scores || { plus2: 0, plus1: 0, minus1: 0 };
+    if (weight === 2) p.scores.plus2++;
+    if (weight === 1) p.scores.plus1++;
+    if (weight === -1) p.scores.minus1++;
+    p.votedBy = p.votedBy || [];
+    p.votedBy.push(socket.data.name);
+    io.to(socket.data.room).emit('players', r.players);
   });
 
-  // 5) L'hôte termine la manche et calcule le gagnant
+  // End round & calculate winner by net score
   socket.on('endRound', () => {
-    const room = socket.data.room;
-    if (!rooms[room]) return;
-    const players = rooms[room].players;
-    // Trouver le nom avec le plus de votes
-    const winnerName = Object.keys(players)
-      .reduce((a, b) => (players[b].votes > players[a].votes ? b : a));
-    io.to(room).emit('roundEnded', { winnerName, players });
-  });
-
-  // 6) L'hôte demande la relecture de toutes les imitations
-  socket.on('playAllImitations', () => {
-    const room = socket.data.room;
-    if (!rooms[room]) return;
-    io.to(room).emit('playAllImitations', rooms[room].players);
-  });
-
-  // 7) L'hôte démarre la manche suivante (reset players)
-  socket.on('start', () => {
-    const room = socket.data.room;
-    if (!rooms[room]) return;
-    const R = rooms[room];
-    for (let p of Object.values(R.players)) {
-      p.submitted = false;
-      p.votes = 0;
-      p.audio = null;
+    const r = rooms[socket.data.room];
+    if (!r) return;
+    let winner = null, max = -Infinity;
+    for (const [name, p] of Object.entries(r.players)) {
+      const net = (p.scores.plus2 * 2 + p.scores.plus1 * 1 - p.scores.minus1 * 1);
+      p.net = net;
+      if (net > max) { max = net; winner = name; }
     }
-    io.to(room).emit('players', R.players);
-    io.to(room).emit('start');
+    io.to(socket.data.room).emit('roundEnded', { winner, players: r.players });
+  });
+
+  // Auto-play all imitations if desired
+  socket.on('playAllImitations', () => {
+    const r = rooms[socket.data.room];
+    if (!r) return;
+    io.to(socket.data.room).emit('playAllImitations', r.players);
+  });
+
+  // Start next round
+  socket.on('start', () => {
+    const r = rooms[socket.data.room];
+    if (!r) return;
+    for (const p of Object.values(r.players)) {
+      p.submitted = false; p.audio = null;
+      p.scores = { plus2: 0, plus1: 0, minus1: 0 }; p.votedBy = [];
+    }
+    io.to(socket.data.room).emit('players', r.players);
+    io.to(socket.data.room).emit('start');
   });
 });
 
-// Démarrage du serveur
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+server.listen(PORT, () => console.log(`Server on port ${PORT}`));
