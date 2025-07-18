@@ -22,11 +22,13 @@ app.get('/room/:r', (_, res) => res.sendFile(path.join(__dirname, 'public/index.
 const rooms = {};
 
 io.on('connection', socket => {
+  // Player joins a room
   socket.on('join', ({ room, name }) => {
     socket.join(room);
     socket.data.room = room;
     socket.data.name = name;
 
+    // Initialize room if needed
     if (!rooms[room]) {
       const mediaDir = path.join(__dirname, 'public', 'media');
       const files    = fs.existsSync(mediaDir) ? fs.readdirSync(mediaDir) : [];
@@ -48,6 +50,7 @@ io.on('connection', socket => {
     }
 
     const R = rooms[room];
+    // Add this player
     R.players[name] = {
       submitted: false,
       audio:     null,
@@ -55,12 +58,14 @@ io.on('connection', socket => {
       votedBy:   []
     };
 
+    // Send initial state
     socket.emit('mediaLibrary', R.mediaLibrary);
-    socket.emit('newMedia', { index: R.currentIndex, media: R.mediaLibrary[R.currentIndex] });
-    io.to(room).emit('players', R.players);
-    socket.emit('isHost', name === R.host);
+    socket.emit('newMedia',      { index: R.currentIndex, media: R.mediaLibrary[R.currentIndex] });
+    io.to(room).emit('players',   R.players);
+    socket.emit('isHost',         name === R.host);
   });
 
+  // Player submits their imitation
   socket.on('submit', ({ name, url }) => {
     const R = rooms[socket.data.room];
     if (!R) return;
@@ -69,10 +74,12 @@ io.on('connection', socket => {
     io.to(socket.data.room).emit('players', R.players);
   });
 
+  // Host asks everyone to play original
   socket.on('playPlayback', ({ url, type }) => {
     io.to(socket.data.room).emit('playPlayback', { url, type });
   });
 
+  // Voting
   socket.on('vote', ({ name, weight }) => {
     const R = rooms[socket.data.room];
     if (!R) return;
@@ -85,6 +92,7 @@ io.on('connection', socket => {
     io.to(socket.data.room).emit('players', R.players);
   });
 
+  // End round: compute net scores and broadcast
   socket.on('endRound', () => {
     const R = rooms[socket.data.room];
     if (!R) return;
@@ -99,6 +107,7 @@ io.on('connection', socket => {
     io.to(socket.data.room).emit('roundEnded', { winner, players: R.players });
   });
 
+  // Host triggers sequential replay
   socket.on('playAllImitations', () => {
     const R = rooms[socket.data.room];
     if (!R) return;
@@ -109,10 +118,16 @@ io.on('connection', socket => {
     items.forEach((it, idx) => {
       setTimeout(() => {
         io.to(socket.data.room).emit('playOneImitation', it);
+        // After last, auto-advance to next round
         if (idx === items.length - 1) {
           setTimeout(() => {
+            // Advance media index
             R.currentIndex = (R.currentIndex + 1) % R.mediaLibrary.length;
-            io.to(socket.data.room).emit('newMedia', { index: R.currentIndex, media: R.mediaLibrary[R.currentIndex] });
+            io.to(socket.data.room).emit('newMedia', {
+              index: R.currentIndex,
+              media: R.mediaLibrary[R.currentIndex]
+            });
+            // Reset players for next round
             Object.values(R.players).forEach(p => {
               p.submitted = false;
               p.audio     = null;
@@ -127,6 +142,7 @@ io.on('connection', socket => {
     });
   });
 
+  // Host manually starts next round
   socket.on('startRound', () => {
     const R = rooms[socket.data.room];
     if (!R) return;
