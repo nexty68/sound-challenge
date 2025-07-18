@@ -19,21 +19,21 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.get('/',        (_, res) => res.sendFile(path.join(__dirname, 'public/index.html')));
 app.get('/room/:r', (_, res) => res.sendFile(path.join(__dirname, 'public/index.html')));
 
-// In-memory room store
+// In-memory store
 const rooms = {};
 
 io.on('connection', socket => {
-  // Join
+  // JOIN
   socket.on('join', ({ room, name }) => {
     socket.join(room);
     socket.data.room = room;
     socket.data.name = name;
 
-    // Init room
+    // Initialize room
     if (!rooms[room]) {
       const mediaDir = path.join(__dirname, 'public', 'media');
       const files    = fs.existsSync(mediaDir) ? fs.readdirSync(mediaDir) : [];
-      const mediaLibrary = files.map(file => {
+      const library  = files.map(file => {
         const ext  = path.extname(file).toLowerCase();
         const type = ext === '.mp4' ? 'video' : 'audio';
         return {
@@ -45,7 +45,7 @@ io.on('connection', socket => {
       });
       rooms[room] = {
         host:           name,
-        mediaLibrary,
+        mediaLibrary:   library,
         currentIndex:   0,
         players:        {}
       };
@@ -71,7 +71,7 @@ io.on('connection', socket => {
     socket.emit('isHost', name === R.host);
   });
 
-  // Submit imitation
+  // SUBMIT
   socket.on('submit', ({ name, url }) => {
     const R = rooms[socket.data.room];
     if (!R) return;
@@ -80,12 +80,12 @@ io.on('connection', socket => {
     io.to(socket.data.room).emit('players', R.players);
   });
 
-  // Play original for all
+  // PLAY ORIGINAL
   socket.on('playPlayback', ({ url, type }) => {
     io.to(socket.data.room).emit('playPlayback', { url, type });
   });
 
-  // Vote
+  // VOTE
   socket.on('vote', ({ name, weight }) => {
     const R = rooms[socket.data.room];
     if (!R) return;
@@ -98,14 +98,14 @@ io.on('connection', socket => {
     io.to(socket.data.room).emit('players', R.players);
   });
 
-  // End round: compute net & broadcast
+  // END ROUND
   socket.on('endRound', () => {
     const R = rooms[socket.data.room];
     if (!R) return;
 
     let winner = null;
     let maxNet = -Infinity;
-    Object.entries(R.players).forEach(([n, p]) => {
+    Object.entries(R.players).forEach(([n,p]) => {
       p.net = p.scores.plus2 * 2 + p.scores.plus1 - p.scores.minus1;
       if (p.net > maxNet) {
         maxNet = p.net;
@@ -119,21 +119,20 @@ io.on('connection', socket => {
     });
   });
 
-  // Sequential replay + auto-advance
+  // SEQUENTIAL REPLAY + AUTO-ADVANCE
   socket.on('playAllImitations', () => {
     const R = rooms[socket.data.room];
     if (!R) return;
 
     const items = Object.entries(R.players)
-      .filter(([, p]) => p.submitted)
-      .map(([n, p]) => ({ name: n, url: p.audio }));
+      .filter(([,p]) => p.submitted)
+      .map(([n,p]) => ({ name: n, url: p.audio }));
 
     const INTERVAL = 8000;
     items.forEach((it, idx) => {
       setTimeout(() => {
         io.to(socket.data.room).emit('playOneImitation', it);
         if (idx === items.length - 1) {
-          // After last, wait INTERVAL then start next round
           setTimeout(() => {
             R.currentIndex = (R.currentIndex + 1) % R.mediaLibrary.length;
             io.to(socket.data.room).emit('newMedia', {
@@ -154,7 +153,7 @@ io.on('connection', socket => {
     });
   });
 
-  // Fallback manual start round
+  // MANUAL NEXT ROUND
   socket.on('startRound', () => {
     const R = rooms[socket.data.room];
     if (!R) return;
