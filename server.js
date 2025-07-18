@@ -14,26 +14,26 @@ const app    = express();
 const server = http.createServer(app);
 const io     = new Server(server, { cors: { origin: '*' } });
 
-// 1) Serve static files
+// Serve static files
 app.use(express.static(path.join(__dirname, 'public')));
-app.get('/',        (_,res) => res.sendFile(path.join(__dirname,'public/index.html')));
-app.get('/room/:r', (_,res) => res.sendFile(path.join(__dirname,'public/index.html')));
+app.get('/',        (_, res) => res.sendFile(path.join(__dirname, 'public/index.html')));
+app.get('/room/:r', (_, res) => res.sendFile(path.join(__dirname, 'public/index.html')));
 
-// 2) In‐memory rooms
+// In-memory room store
 const rooms = {};
 
 io.on('connection', socket => {
-  // JOIN ROOM
+  // Join
   socket.on('join', ({ room, name }) => {
     socket.join(room);
     socket.data.room = room;
     socket.data.name = name;
 
-    // Initialize room if needed
+    // Init room
     if (!rooms[room]) {
       const mediaDir = path.join(__dirname, 'public', 'media');
       const files    = fs.existsSync(mediaDir) ? fs.readdirSync(mediaDir) : [];
-      const lib = files.map(file => {
+      const mediaLibrary = files.map(file => {
         const ext  = path.extname(file).toLowerCase();
         const type = ext === '.mp4' ? 'video' : 'audio';
         return {
@@ -44,10 +44,10 @@ io.on('connection', socket => {
         };
       });
       rooms[room] = {
-        host:         name,
-        mediaLibrary: lib,
-        currentIndex: 0,
-        players:      {}
+        host:           name,
+        mediaLibrary,
+        currentIndex:   0,
+        players:        {}
       };
     }
 
@@ -57,7 +57,7 @@ io.on('connection', socket => {
     R.players[name] = {
       submitted: false,
       audio:     null,
-      scores:    { plus2:0, plus1:0, minus1:0 },
+      scores:    { plus2: 0, plus1: 0, minus1: 0 },
       votedBy:   []
     };
 
@@ -71,7 +71,7 @@ io.on('connection', socket => {
     socket.emit('isHost', name === R.host);
   });
 
-  // SUBMIT imitation
+  // Submit imitation
   socket.on('submit', ({ name, url }) => {
     const R = rooms[socket.data.room];
     if (!R) return;
@@ -80,12 +80,12 @@ io.on('connection', socket => {
     io.to(socket.data.room).emit('players', R.players);
   });
 
-  // PLAY original media for all
+  // Play original for all
   socket.on('playPlayback', ({ url, type }) => {
     io.to(socket.data.room).emit('playPlayback', { url, type });
   });
 
-  // VOTE weighted
+  // Vote
   socket.on('vote', ({ name, weight }) => {
     const R = rooms[socket.data.room];
     if (!R) return;
@@ -98,10 +98,9 @@ io.on('connection', socket => {
     io.to(socket.data.room).emit('players', R.players);
   });
 
-  // END ROUND: compute net scores & broadcast
+  // End round: compute net & broadcast
   socket.on('endRound', () => {
-    const room = socket.data.room;
-    const R    = rooms[room];
+    const R = rooms[socket.data.room];
     if (!R) return;
 
     let winner = null;
@@ -114,37 +113,33 @@ io.on('connection', socket => {
       }
     });
 
-    io.to(room).emit('roundEnded', {
+    io.to(socket.data.room).emit('roundEnded', {
       winner,
       players: R.players
     });
   });
 
-  // SEQUENTIAL REPLAY (host or anyone triggers)
+  // Sequential replay + auto-advance
   socket.on('playAllImitations', () => {
-    const room = socket.data.room;
-    const R    = rooms[room];
+    const R = rooms[socket.data.room];
     if (!R) return;
 
     const items = Object.entries(R.players)
       .filter(([, p]) => p.submitted)
       .map(([n, p]) => ({ name: n, url: p.audio }));
 
-    const INTERVAL = 8000; // 8s between each
+    const INTERVAL = 8000;
     items.forEach((it, idx) => {
       setTimeout(() => {
-        io.to(room).emit('playOneImitation', it);
-        // If this is the last item, after INTERVAL start next round
+        io.to(socket.data.room).emit('playOneImitation', it);
         if (idx === items.length - 1) {
+          // After last, wait INTERVAL then start next round
           setTimeout(() => {
-            // Advance media index
             R.currentIndex = (R.currentIndex + 1) % R.mediaLibrary.length;
-            // Broadcast new media
-            io.to(room).emit('newMedia', {
+            io.to(socket.data.room).emit('newMedia', {
               index: R.currentIndex,
               media: R.mediaLibrary[R.currentIndex]
             });
-            // Reset players for next round
             Object.values(R.players).forEach(p => {
               p.submitted = false;
               p.audio     = null;
@@ -152,20 +147,17 @@ io.on('connection', socket => {
               p.votedBy   = [];
               delete p.net;
             });
-            // Notify clients to reset
-            io.to(room).emit('roundStarted');
+            io.to(socket.data.room).emit('roundStarted');
           }, INTERVAL);
         }
       }, idx * INTERVAL);
     });
   });
 
-  // START ROUND: server-driven reset (fallback if needed)
+  // Fallback manual start round
   socket.on('startRound', () => {
-    const room = socket.data.room;
-    const R    = rooms[room];
+    const R = rooms[socket.data.room];
     if (!R) return;
-
     Object.values(R.players).forEach(p => {
       p.submitted = false;
       p.audio     = null;
@@ -173,12 +165,9 @@ io.on('connection', socket => {
       p.votedBy   = [];
       delete p.net;
     });
-
-    io.to(room).emit('roundStarted');
+    io.to(socket.data.room).emit('roundStarted');
   });
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+server.listen(PORT, () => console.log(`Server on port ${PORT}`));
