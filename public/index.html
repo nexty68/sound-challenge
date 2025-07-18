@@ -7,7 +7,7 @@
   <link rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
   <style>
-    /* Your CSS from before… */
+    /* Ton CSS habituel */
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:Poppins,sans-serif;background:linear-gradient(135deg,#1a1a2e,#16213e);color:#fff}
     .container{max-width:1200px;margin:0 auto;padding:20px}
@@ -16,7 +16,10 @@
     .subtitle{opacity:.8;margin-top:10px}
     .section-title{display:flex;align-items:center;gap:10px;color:#4ecdc4;font-size:1.8rem;margin-bottom:20px}
     .section-title i{background:linear-gradient(45deg,#ff6b6b,#4ecdc4);-webkit-background-clip:text;color:transparent}
-    .current-media,.recorder-section,.voting-section,.results-section,.media-manager,.instructions,#scoreboard{background:rgba(255,255,255,0.05);border-radius:20px;padding:25px;box-shadow:0 10px 30px rgba(0,0,0,0.3);backdrop-filter:blur(10px);margin-bottom:30px}
+    .current-media,.recorder-section,.voting-section,.results-section,.media-manager,.instructions,#scoreboard {
+      background:rgba(255,255,255,0.05);border-radius:20px;padding:25px;
+      box-shadow:0 10px 30px rgba(0,0,0,0.3);backdrop-filter:blur(10px);margin-bottom:30px;
+    }
     .media-container{display:flex;flex-direction:column;align-items:center;gap:20px}
     #original-audio{width:100%;max-width:800px}
     #video-player{width:100%;max-width:1000px;height:500px;border-radius:15px}
@@ -40,8 +43,10 @@
   </style>
 </head>
 <body>
-  <!-- Join Screen -->
-  <div id="join-screen" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;z-index:999">
+  <!-- Écran pseudo -->
+  <div id="join-screen"
+       style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);
+              display:flex;align-items:center;justify-content:center;z-index:999">
     <div style="background:#16213e;padding:30px;border-radius:8px;text-align:center">
       <h2 style="color:#fff;margin-bottom:15px">Choisis ton pseudo</h2>
       <input id="name-input" placeholder="Ton pseudo"
@@ -50,7 +55,7 @@
     </div>
   </div>
 
-  <!-- Game UI -->
+  <!-- Interface de jeu -->
   <div id="game" style="display:none">
     <div class="container">
       <header>
@@ -64,7 +69,7 @@
         <ul id="score-list"></ul>
       </div>
 
-      <!-- Current Media -->
+      <!-- Média à imiter -->
       <div class="current-media">
         <h2 class="section-title"><i class="fas fa-play-circle"></i> Média à imiter</h2>
         <div class="media-container">
@@ -74,11 +79,14 @@
         </div>
       </div>
 
-      <!-- Recorder -->
+      <!-- Section enregistrement -->
       <div class="recorder-section">
         <h2 class="section-title"><i class="fas fa-microphone-alt"></i> Ton imitation</h2>
         <div id="visualizer" class="sound-visualizer"></div>
-        <div id="recIndicator" class="recording-indicator"><div class="pulse"></div><div id="timer" class="timer">00:05</div></div>
+        <div id="recIndicator" class="recording-indicator">
+          <div class="pulse"></div>
+          <div id="timer" class="timer">00:05</div>
+        </div>
         <div class="controls">
           <button id="recordBtn" class="btn btn-primary btn-large">⏺ Enregistrer</button>
           <button id="playBtn" class="btn btn-secondary" disabled>▶ Écouter</button>
@@ -86,7 +94,7 @@
         </div>
       </div>
 
-      <!-- Voting Section -->
+      <!-- Section vote -->
       <div class="voting-section">
         <h2 class="section-title"><i class="fas fa-vote-yea"></i> Vote pour le meilleur</h2>
         <p id="voting-status">En attente des soumissions…</p>
@@ -99,16 +107,18 @@
         </div>
       </div>
 
-      <!-- Sequence Playback -->
-      <div id="sequence-playback" style="display:none;text-align:center;margin-bottom:30px">
+      <!-- Séquence de relecture auto -->
+      <div id="sequence-playback"
+           style="display:none;text-align:center;margin-bottom:30px">
         <h2 class="section-title"><i class="fas fa-play-circle"></i> Relecture des imitations</h2>
         <div id="sequence-item">
-          <div id="seq-player-name" style="font-size:1.5rem;margin-bottom:10px">–</div>
+          <div id="seq-player-name"
+               style="font-size:1.5rem;margin-bottom:10px">–</div>
           <audio id="seq-audio" controls style="width:80%;max-width:600px"></audio>
         </div>
       </div>
 
-      <!-- Results -->
+      <!-- Résultats -->
       <div id="results-section" class="results-section">
         <h2 class="section-title"><i class="fas fa-trophy"></i> Résultats</h2>
         <div class="winner-card">
@@ -120,6 +130,7 @@
         </div>
       </div>
 
+      <!-- Gestion médias -->
       <div class="media-manager">
         <h2 class="section-title"><i class="fas fa-music"></i> Gestion des médias</h2>
         <div id="media-list" class="media-list"></div>
@@ -127,51 +138,51 @@
 
       <div class="instructions">
         <h3><i class="fas fa-info-circle"></i> Comment ajouter des médias</h3>
-        <p>Dépose tes fichiers MP3/WAV/MP4 dans <code>public/media/</code></p>
+        <p>Dépose tes MP3/WAV/MP4 dans <code>public/media/</code></p>
       </div>
     </div>
   </div>
 
-  <!-- Socket.IO + Client JS -->
+  <!-- Socket.IO + client JS -->
   <script src="/socket.io/socket.io.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      // DOM refs…
-      const joinScreen = document.getElementById('join-screen');
-      const game       = document.getElementById('game');
-      const joinBtn    = document.getElementById('join-btn');
-      const nameInput  = document.getElementById('name-input');
+      // DOM refs
+      const joinScreen       = document.getElementById('join-screen');
+      const game             = document.getElementById('game');
+      const joinBtn          = document.getElementById('join-btn');
+      const nameInput        = document.getElementById('name-input');
 
-      const recordBtn      = document.getElementById('recordBtn');
-      const playBtn        = document.getElementById('playBtn');
-      const submitBtn      = document.getElementById('submitBtn');
-      const visualizer     = document.getElementById('visualizer');
-      const recIndicator   = document.getElementById('recIndicator');
-      const timerElem      = document.getElementById('timer');
+      const recordBtn        = document.getElementById('recordBtn');
+      const playBtn          = document.getElementById('playBtn');
+      const submitBtn        = document.getElementById('submitBtn');
+      const visualizer       = document.getElementById('visualizer');
+      const recIndicator     = document.getElementById('recIndicator');
+      const timerElem        = document.getElementById('timer');
 
-      const mediaTitle     = document.getElementById('media-title');
-      const originalAudio  = document.getElementById('original-audio');
-      const videoPlayer    = document.getElementById('video-player');
-      const mediaList      = document.getElementById('media-list');
+      const mediaTitle       = document.getElementById('media-title');
+      const originalAudio    = document.getElementById('original-audio');
+      const videoPlayer      = document.getElementById('video-player');
+      const mediaList        = document.getElementById('media-list');
 
-      const playersContainer  = document.getElementById('players-container');
-      const votingStatus      = document.getElementById('voting-status');
-      const showOriginalBtn   = document.getElementById('showOriginalBtn');
-      const playAllBtn        = document.getElementById('playAllBtn');
-      const endRoundBtn       = document.getElementById('endRoundBtn');
-      const nextRoundBtn      = document.getElementById('nextRoundBtn');
+      const playersContainer = document.getElementById('players-container');
+      const votingStatus     = document.getElementById('voting-status');
+      const showOriginalBtn  = document.getElementById('showOriginalBtn');
+      const playAllBtn       = document.getElementById('playAllBtn');
+      const endRoundBtn      = document.getElementById('endRoundBtn');
+      const nextRoundBtn     = document.getElementById('nextRoundBtn');
 
-      const sequencePlayback  = document.getElementById('sequence-playback');
-      const seqName           = document.getElementById('seq-player-name');
-      const seqAudio          = document.getElementById('seq-audio');
+      const sequencePlayback = document.getElementById('sequence-playback');
+      const seqName          = document.getElementById('seq-player-name');
+      const seqAudio         = document.getElementById('seq-audio');
 
-      const resultsSection = document.getElementById('results-section');
-      const winnerName     = document.getElementById('winner-name');
-      const winnerVotes    = document.getElementById('winner-votes');
-      const winnerAudio    = document.getElementById('winner-audio');
+      const resultsSection   = document.getElementById('results-section');
+      const winnerName       = document.getElementById('winner-name');
+      const winnerVotes      = document.getElementById('winner-votes');
+      const winnerAudio      = document.getElementById('winner-audio');
 
-      const scoreList  = document.getElementById('score-list');
-      const scoreboard = document.getElementById('scoreboard');
+      const scoreList        = document.getElementById('score-list');
+      const scoreboard       = document.getElementById('scoreboard');
 
       // State
       let socket;
@@ -183,184 +194,186 @@
       // Visualizer
       function initVisualizer() {
         visualizer.innerHTML = '';
-        for (let i=0;i<50;i++){
+        for (let i=0; i<50; i++) {
           const bar = document.createElement('div');
-          bar.className='visualizer-bar';
-          bar.style.height='20px';
+          bar.className = 'visualizer-bar';
+          bar.style.height = '20px';
           visualizer.appendChild(bar);
         }
       }
-      function animateBars(){
-        visualizer.querySelectorAll('.visualizer-bar').forEach(bar=>{
-          bar.style.height=`${Math.random()*80+20}px`;
+      function animateBars() {
+        visualizer.querySelectorAll('.visualizer-bar').forEach(bar => {
+          bar.style.height = `${Math.random()*80+20}px`;
         });
       }
 
-      // Media list
-      function renderMediaList(){
-        mediaList.innerHTML='';
-        mediaLibrary.forEach((m,i)=>{
-          const btn=document.createElement('button');
-          btn.className='btn btn-secondary';
-          btn.textContent=m.title;
-          btn.onclick=()=>loadMedia(i);
+      // Render media list
+      function renderMediaList() {
+        mediaList.innerHTML = '';
+        mediaLibrary.forEach((m,i) => {
+          const btn = document.createElement('button');
+          btn.className = 'btn btn-secondary';
+          btn.textContent = m.title;
+          btn.onclick = () => loadMedia(i);
           mediaList.appendChild(btn);
         });
       }
-      function loadMedia(i){
-        const m=mediaLibrary[i];
-        mediaTitle.textContent=m.title;
-        if(m.type==='audio'){
-          originalAudio.src=m.source;
-          originalAudio.style.display='block';
-          videoPlayer.style.display='none';
+      function loadMedia(i) {
+        const m = mediaLibrary[i];
+        mediaTitle.textContent = m.title;
+        if (m.type==='audio') {
+          originalAudio.src = m.source;
+          originalAudio.style.display = 'block';
+          videoPlayer.style.display = 'none';
         } else {
-          videoPlayer.src=m.source;
-          videoPlayer.style.display='block';
-          originalAudio.style.display='none';
+          videoPlayer.src = m.source;
+          videoPlayer.style.display = 'block';
+          originalAudio.style.display = 'none';
         }
-        playBtn.disabled=true;
-        submitBtn.disabled=true;
+        playBtn.disabled = true;
+        submitBtn.disabled = true;
       }
 
-      // Players + vote UI
-      function renderPlayers(){
-        playersContainer.innerHTML='';
-        Object.entries(playersData).forEach(([name,p])=>{
-          const card=document.createElement('div');
-          card.className='player-card';
-          let html=`
+      // Render players + voting buttons
+      function renderPlayers() {
+        playersContainer.innerHTML = '';
+        Object.entries(playersData).forEach(([name, p])=>{
+          const card = document.createElement('div');
+          card.className = 'player-card';
+          let html = `
             <div class="player-avatar"><i class="fas fa-user"></i></div>
             <div class="player-name">${name}</div>
             <div class="player-status">${p.submitted?'✅ Soumis':'⏳ En attente'}</div>
           `;
-          if(p.submitted){
-            html+=`<audio controls src="${p.audio}" style="width:100%;margin:10px 0;"></audio>`;
-            if(!hasVoted){
-              html+=`
+          if (p.submitted) {
+            html += `<audio controls src="${p.audio}" style="width:100%;margin:10px 0;"></audio>`;
+            if (!hasVoted) {
+              html += `
                 <button class="btn btn-secondary vote-btn" data-name="${name}" data-score="2">+2</button>
                 <button class="btn btn-secondary vote-btn" data-name="${name}" data-score="1">+1</button>
                 <button class="btn btn-secondary vote-btn" data-name="${name}" data-score="-1">-1</button>
               `;
             }
           }
-          card.innerHTML=html;
+          card.innerHTML = html;
           playersContainer.appendChild(card);
         });
-        // attach vote handlers
+        // Attach vote handlers
         document.querySelectorAll('.vote-btn').forEach(btn=>{
-          btn.onclick=()=>{
-            const name=btn.dataset.name;
-            const w=parseInt(btn.dataset.score,10);
-            socket.emit('vote',{name,weight:w});
-            hasVoted=true;
-            document.querySelectorAll(`.vote-btn[data-name="${name}"]`).forEach(b=>b.disabled=true);
+          btn.onclick = ()=>{
+            const target = btn.dataset.name;
+            const w = parseInt(btn.dataset.score, 10);
+            socket.emit('vote', { name: target, weight: w });
+            hasVoted = true;
+            document.querySelectorAll(`.vote-btn[data-name="${target}"]`).forEach(b=>b.disabled=true);
           };
         });
-        const done=Object.values(playersData).filter(p=>p.submitted).length;
-        const total=Object.keys(playersData).length;
-        votingStatus.textContent=done<total?`${done}/${total} soumis`:'Tous soumis !';
-        if(done===total && !voteCompleted){
+        const done = Object.values(playersData).filter(p=>p.submitted).length;
+        const total= Object.keys(playersData).length;
+        votingStatus.textContent = done<total ? `${done}/${total} soumis` : 'Tous soumis !';
+        if (done===total && !voteCompleted) {
           playAllBtn.style.display='inline-block';
         }
       }
 
-      // Scoreboard
-      function renderScoreboard(){
-        scoreList.innerHTML='';
-        Object.entries(scores).sort((a,b)=>b[1]-a[1]).forEach(([n,pts])=>{
-          const li=document.createElement('li');
-          li.innerHTML=`<strong>${n}</strong>: ${pts} pt${pts>1?'s':''}`;
-          scoreList.appendChild(li);
-        });
-        scoreboard.style.display='block';
+      // Render scoreboard
+      function renderScoreboard() {
+        scoreList.innerHTML = '';
+        Object.entries(scores)
+          .sort((a,b)=>b[1]-a[1])
+          .forEach(([n,pts])=>{
+            const li = document.createElement('li');
+            li.innerHTML = `<strong>${n}</strong>: ${pts} pt${pts>1?'s':''}`;
+            scoreList.appendChild(li);
+          });
+        scoreboard.style.display = 'block';
       }
 
-      // Buttons
-      recordBtn.onclick=()=>{
-        if(!recorder)return;
-        recordedChunks=[];
-        recorder.state==='inactive'?recorder.start():recorder.stop();
+      // Button handlers
+      recordBtn.onclick = ()=> {
+        if (!recorder) return;
+        recordedChunks = [];
+        recorder.state==='inactive' ? recorder.start() : recorder.stop();
       };
-      playBtn.onclick=()=>mediaURL&&new Audio(mediaURL).play();
-      submitBtn.onclick=()=>{
-        submitBtn.disabled=true;
-        socket.emit('submit',{name:nameInput.value.trim(),url:mediaURL});
+      playBtn.onclick = ()=> mediaURL && new Audio(mediaURL).play();
+      submitBtn.onclick = ()=> {
+        submitBtn.disabled = true;
+        socket.emit('submit', { name: nameInput.value.trim(), url: mediaURL });
       };
-      showOriginalBtn.onclick=()=>{
-        let url,type;
-        if(originalAudio.style.display==='block'){
-          url=originalAudio.src;type='audio';
+      showOriginalBtn.onclick = ()=> {
+        let url, type;
+        if (originalAudio.style.display==='block') {
+          url = originalAudio.src; type='audio';
         } else {
-          url=videoPlayer.src;type='video';
+          url = videoPlayer.src; type='video';
         }
-        socket.emit('playPlayback',{url,type});
+        socket.emit('playPlayback', { url, type });
       };
-      playAllBtn.onclick=()=>socket.emit('playAllImitations');
-      endRoundBtn.onclick=()=>{
+      playAllBtn.onclick = ()=> socket.emit('playAllImitations');
+      endRoundBtn.onclick = ()=> {
         endRoundBtn.style.display='none';
         socket.emit('endRound');
       };
-      nextRoundBtn.onclick=()=>socket.emit('start');
+      nextRoundBtn.onclick = ()=> socket.emit('start');
 
       // MediaRecorder setup
-      navigator.mediaDevices.getUserMedia({audio:true})
+      navigator.mediaDevices.getUserMedia({ audio: true })
         .then(stream=>{
-          recorder=new MediaRecorder(stream);
-          recorder.onstart=()=>{
+          recorder = new MediaRecorder(stream);
+          recorder.onstart = ()=>{
             recIndicator.classList.add('active');
             initVisualizer();
             recordBtn.textContent='⏹ Arrêter';
-            visualizerInterval=setInterval(animateBars,200);
+            visualizerInterval = setInterval(animateBars, 200);
           };
-          recorder.onstop=()=>{
+          recorder.onstop = ()=>{
             clearInterval(visualizerInterval);
             recIndicator.classList.remove('active');
             recordBtn.textContent='⏺ Enregistrer';
-            const blob=new Blob(recordedChunks,{type:'audio/webm'});
-            mediaURL=URL.createObjectURL(blob);
-            playBtn.disabled=false;
-            submitBtn.disabled=false;
+            const blob = new Blob(recordedChunks, { type:'audio/webm' });
+            mediaURL = URL.createObjectURL(blob);
+            playBtn.disabled = false;
+            submitBtn.disabled = false;
           };
-          recorder.ondataavailable=e=>recordedChunks.push(e.data);
+          recorder.ondataavailable = e=> recordedChunks.push(e.data);
         })
         .catch(err=>alert('Micro inaccessible : '+err.message));
 
-      // Socket.IO
-      joinBtn.onclick=()=>{
-        const name=nameInput.value.trim();
-        if(!name)return alert('Entre un pseudo !');
+      // Socket.IO flow
+      joinBtn.onclick = ()=>{
+        const name = nameInput.value.trim();
+        if (!name) return alert('Entre un pseudo !');
         joinScreen.style.display='none';
         game.style.display='block';
-        socket=io();
-        const room=location.pathname.split('/').pop();
-        socket.emit('join',{room,name});
+        socket = io();
 
-        socket.on('mediaLibrary',lib=>{
-          mediaLibrary=lib;
+        // Room ID = last segment, or “main”
+        let room = location.pathname.split('/').pop();
+        if (!room || room==='') room = 'main';
+        socket.emit('join', { room, name });
+
+        socket.on('mediaLibrary', lib=>{
+          mediaLibrary = lib;
           renderMediaList();
           loadMedia(0);
         });
-
-        socket.on('players',players=>{
-          playersData=players;
+        socket.on('players', pd=>{
+          playersData = pd;
           // init scores
-          Object.keys(players).forEach(n=>scores[n]=scores[n]||0);
+          Object.keys(pd).forEach(n=>scores[n]=scores[n]||0);
           renderPlayers();
           renderScoreboard();
         });
-
-        socket.on('playPlayback',({url,type})=>{
-          if(type==='audio')new Audio(url).play();
-          else{
+        socket.on('playPlayback', ({url,type})=>{
+          if (type==='audio') new Audio(url).play();
+          else {
             videoPlayer.src=url;
             videoPlayer.muted=true;
             videoPlayer.play();
           }
         });
-
-        socket.on('roundEnded',({winner,players})=>{
-          voteCompleted=true;
+        socket.on('roundEnded', ({winner, players})=>{
+          voteCompleted = true;
           scores[winner]++;
           renderScoreboard();
           winnerName.textContent=winner;
@@ -369,17 +382,37 @@
           winnerAudio.style.display='block';
           resultsSection.style.display='block';
 
-          // sequence auto-play
-          const items=Object.entries(players)
+          // **Auto-sequence** at end of round
+          const items = Object.entries(players)
             .filter(([_,p])=>p.submitted)
-            .map(([n,p])=>({name:n,url:p.audio}));
+            .map(([n,p])=>({ name:n, url:p.audio }));
           let idx=0;
           sequencePlayback.style.display='block';
           resultsSection.style.display='none';
-          function next(){
-            if(idx>=items.length){
+          function playNext(){
+            if (idx>=items.length){
               sequencePlayback.style.display='none';
               resultsSection.style.display='block';
+              return;
+            }
+            const it = items[idx++];
+            seqName.textContent = it.name;
+            seqAudio.src = it.url;
+            seqAudio.play();
+          }
+          seqAudio.onended = playNext;
+          playNext();
+        });
+        socket.on('playAllImitations', players=>{
+          // Use same sequence logic, and show name for each
+          const items = Object.entries(players)
+            .filter(([_,p])=>p.submitted)
+            .map(([n,p])=>({ name:n, url:p.audio }));
+          let idx=0;
+          sequencePlayback.style.display='block';
+          function playNext(){
+            if(idx>=items.length){
+              sequencePlayback.style.display='none';
               return;
             }
             const it=items[idx++];
@@ -387,23 +420,10 @@
             seqAudio.src=it.url;
             seqAudio.play();
           }
-          seqAudio.onended=next;
-          next();
+          seqAudio.onended = playNext;
+          playNext();
         });
-
-        socket.on('playAllImitations',players=>{
-          const urls=Object.values(players).filter(p=>p.submitted).map(p=>p.audio);
-          let i=0;
-          function nxt(){
-            if(i>=urls.length)return;
-            const a=new Audio(urls[i++]);
-            a.onended=nxt;
-            a.play();
-          }
-          nxt();
-        });
-
-        socket.on('start',()=>{
+        socket.on('start', ()=>{
           voteCompleted=false;
           hasVoted=false;
           resultsSection.style.display='none';
