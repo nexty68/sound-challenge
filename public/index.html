@@ -5,75 +5,62 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>Sound Challenge</title>
   <link rel="stylesheet"
-   href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
   <style>
-    /*—Reset & Body—*/
-    *{margin:0;padding:0;box-sizing:border-box;}
-    body{font-family:Poppins,sans-serif;background:linear-gradient(135deg,#1a1a2e,#16213e);color:#fff;min-height:100vh;}
-    .container{max-width:1200px;margin:0 auto;padding:20px;}
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:Poppins,sans-serif; background:linear-gradient(135deg,#1a1a2e,#16213e); color:#fff; min-height:100vh; }
+    .container { max-width:1200px; margin:0 auto; padding:20px; }
+    header { text-align:center; padding:30px; }
+    .logo { font-family:Righteous,cursive; font-size:3.5rem; background:linear-gradient(45deg,#ff6b6b,#4ecdc4); -webkit-background-clip:text; color:transparent; text-shadow:0 5px 15px rgba(0,0,0,0.2); }
+    .subtitle { opacity:.8; margin-top:10px; }
+    h2.section-title { display:flex; align-items:center; gap:10px; color:#4ecdc4; font-size:1.8rem; }
+    h2.section-title i { background:linear-gradient(45deg,#ff6b6b,#4ecdc4); -webkit-background-clip:text; color:transparent; }
 
-    header{text-align:center;padding:30px;}
-    .logo{font-family:Righteous,cursive;font-size:3.5rem;background:linear-gradient(45deg,#ff6b6b,#4ecdc4);-webkit-background-clip:text;color:transparent;text-shadow:0 5px 15px rgba(0,0,0,0.2);}
-    .subtitle{opacity:.8;margin-top:10px;}
+    .media-container { text-align:center; }
+    #original-audio { width:100%; max-width:800px; }
+    #video-player { width:100%; max-width:1000px; height:500px; border:none; border-radius:15px; }
 
-    /*—Titles—*/
-    h2.section-title{display:flex;align-items:center;gap:10px;color:#4ecdc4;font-size:1.8rem;}
-    h2.section-title i{background:linear-gradient(45deg,#ff6b6b,#4ecdc4);-webkit-background-clip:text;color:transparent;}
-
-    /*—Panels—*/
     .current-media, .recorder-section, .voting-section,
     .results-section, .media-manager, .instructions, #scoreboard {
-      background:rgba(255,255,255,0.05);
-      border-radius:20px;padding:25px;margin-bottom:30px;
-      box-shadow:0 10px 30px rgba(0,0,0,0.3);
-      backdrop-filter:blur(10px);
+      background:rgba(255,255,255,0.05); border-radius:20px; padding:25px; margin-bottom:30px;
+      box-shadow:0 10px 30px rgba(0,0,0,0.3); backdrop-filter:blur(10px);
     }
 
-    /*—Media Center—*/
-    .media-container{text-align:center;}
-    #original-audio{width:100%;max-width:800px;}
-    #video-player{width:100%;max-width:1000px;height:500px;border:none;border-radius:15px;}
+    .controls { display:flex; gap:15px; flex-wrap:wrap; justify-content:center; margin-top:20px; }
+    .btn { padding:12px 25px; border:none; border-radius:50px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:8px; transition:.3s; }
+    .btn-primary { background:linear-gradient(45deg,#ff6b6b,#ff8e53); color:#fff; }
+    .btn-secondary { background:rgba(255,255,255,0.1); color:#fff; border:1px solid rgba(255,255,255,0.2); }
+    .btn-large { font-size:1.2rem; }
 
-    /*—Buttons—*/
-    .controls{display:flex;gap:15px;flex-wrap:wrap;justify-content:center;margin-top:20px;}
-    .btn{padding:12px 25px;border:none;border-radius:50px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;transition:.3s;}
-    .btn-primary{background:linear-gradient(45deg,#ff6b6b,#ff8e53);color:#fff;}
-    .btn-secondary{background:rgba(255,255,255,0.1);color:#fff;border:1px solid rgba(255,255,255,0.2);}
-    .btn-large{font-size:1.2rem;}
+    .sound-visualizer { display:flex; align-items:flex-end; gap:2px; height:100px; background:rgba(0,0,0,0.2); border-radius:10px; padding:10px; margin:20px 0; }
+    .visualizer-bar { width:8px; background:#4ecdc4; border-radius:4px; transition:height .2s; }
+    .recording-indicator { display:flex; align-items:center; gap:10px; opacity:0; transition:opacity .3s; }
+    .recording-indicator.active { opacity:1; }
+    .pulse { width:15px; height:15px; background:#ff6b6b; border-radius:50%; animation:pulse 1.5s infinite; }
+    .timer { font-weight:600; font-size:1.2rem; }
+    @keyframes pulse { 0%{transform:scale(1)}50%{transform:scale(1.3)}100%{transform:scale(1)} }
 
-    /*—Visualizer—*/
-    .sound-visualizer{display:flex;align-items:flex-end;gap:2px;height:100px;background:rgba(0,0,0,0.2);border-radius:10px;padding:10px;margin:20px 0;}
-    .visualizer-bar{width:8px;background:#4ecdc4;border-radius:4px;transition:height .2s;}
-    .recording-indicator{display:flex;align-items:center;gap:10px;opacity:0;transition:opacity .3s;}
-    .recording-indicator.active{opacity:1;}
-    .pulse{width:15px;height:15px;background:#ff6b6b;border-radius:50%;animation:pulse 1.5s infinite;}
-    .timer{font-weight:600;font-size:1.2rem;}
-    @keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.3)}100%{transform:scale(1)}}
+    .players-container { display:flex; flex-wrap:wrap; gap:20px; justify-content:center; }
+    .player-card { background:rgba(0,0,0,0.2); border-radius:15px; padding:20px; width:220px; text-align:center; }
 
-    /*—Players—*/
-    .players-container{display:flex;flex-wrap:wrap;gap:20px;justify-content:center;}
-    .player-card{background:rgba(0,0,0,0.2);border-radius:15px;padding:20px;width:220px;text-align:center;}
-
-    /*—Scoreboard & Results—*/
-    #scoreboard{display:none;}
-    #score-list{list-style:none;padding-left:0;}
-    .results-section{display:none;text-align:center;}
-    progress{width:80%;max-width:600px;height:8px;margin-bottom:15px;}
+    #scoreboard { display:none; }
+    #score-list { list-style:none; padding-left:0; }
+    .results-section { display:none; text-align:center; }
+    progress { width:80%; max-width:600px; height:8px; margin-bottom:15px; }
   </style>
 </head>
 <body>
-
-  <!-- Join -->
-  <div id="join-screen" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;z-index:999;">
-    <div style="background:#16213e;padding:30px;border-radius:8px;text-align:center;">
-      <h2 style="color:#fff;margin-bottom:15px;">Choisis ton pseudo</h2>
-      <input id="name-input" placeholder="Ton pseudo" style="padding:8px;width:200px;border-radius:4px;border:1px solid #4ecdc4;margin-bottom:15px;"/>
+  <!-- Join Screen -->
+  <div id="join-screen" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;z-index:999">
+    <div style="background:#16213e;padding:30px;border-radius:8px;text-align:center">
+      <h2 style="color:#fff;margin-bottom:15px">Choisis ton pseudo</h2>
+      <input id="name-input" placeholder="Ton pseudo" style="padding:8px;width:200px;border-radius:4px;border:1px solid #4ecdc4;margin-bottom:15px"/>
       <button id="join-btn" class="btn btn-primary">Entrer</button>
     </div>
   </div>
 
-  <!-- Game -->
-  <div id="game" style="display:none;">
+  <!-- Game UI -->
+  <div id="game" style="display:none">
     <div class="container">
 
       <!-- Scoreboard -->
@@ -82,17 +69,17 @@
         <ul id="score-list"></ul>
       </div>
 
-      <!-- Média à imiter -->
+      <!-- Media to imitate -->
       <div class="current-media">
         <h2 class="section-title"><i class="fas fa-play-circle"></i> Média à imiter</h2>
         <div class="media-container">
           <div id="media-title">–</div>
-          <audio id="original-audio" controls style="display:none;"></audio>
-          <iframe id="video-player" style="display:none;"></iframe>
+          <audio id="original-audio" controls style="display:none"></audio>
+          <iframe id="video-player" style="display:none"></iframe>
         </div>
       </div>
 
-      <!-- Recorder -->
+      <!-- Recorder Section -->
       <div class="recorder-section">
         <h2 class="section-title"><i class="fas fa-microphone-alt"></i> Ton imitation</h2>
         <div id="visualizer" class="sound-visualizer"></div>
@@ -106,31 +93,31 @@
         </div>
       </div>
 
-      <!-- Voting -->
+      <!-- Voting Section -->
       <div class="voting-section">
         <h2 class="section-title"><i class="fas fa-vote-yea"></i> Vote pour le meilleur</h2>
         <p id="voting-status">En attente des soumissions…</p>
         <div id="players-container" class="players-container"></div>
-        <div class="controls" style="margin-top:20px;">
+        <div class="controls" style="margin-top:20px">
           <button id="showOriginalBtn" class="btn btn-primary">🔁 Réécouter original</button>
-          <button id="playAllBtn" class="btn btn-secondary" style="display:none;">🔊 Écouter toutes les imitations</button>
-          <button id="endRoundBtn" class="btn btn-secondary" style="display:none;">🛑 Terminer la manche</button>
-          <button id="nextRoundBtn" class="btn btn-primary" style="display:none;">⏭ Manche suivante</button>
+          <button id="playAllBtn" class="btn btn-secondary" style="display:none">🔊 Écouter toutes les imitations</button>
+          <button id="endRoundBtn" class="btn btn-secondary" style="display:none">🛑 Terminer la manche</button>
+          <button id="nextRoundBtn" class="btn btn-primary" style="display:none">⏭ Manche suivante</button>
         </div>
       </div>
 
       <!-- Sequence Playback -->
-      <div id="sequence-playback" style="display:none;text-align:center;margin-bottom:30px;">
+      <div id="sequence-playback" style="display:none;text-align:center;margin-bottom:30px">
         <h2 class="section-title"><i class="fas fa-play-circle"></i> Relecture des imitations</h2>
-        <div id="seq-progress" style="margin-bottom:8px;font-weight:600;">0/0</div>
+        <div id="seq-progress" style="margin-bottom:8px;font-weight:600">0/0</div>
         <progress id="seq-bar" value="0" max="0"></progress>
         <div>
           <div id="seq-player-name" style="font-size:1.5rem;margin:10px 0;">–</div>
-          <audio id="seq-audio" controls style="width:80%;max-width:600px;"></audio>
+          <audio id="seq-audio" controls style="width:80%;max-width:600px"></audio>
         </div>
       </div>
 
-      <!-- Results -->
+      <!-- Results Section -->
       <div id="results-section" class="results-section">
         <h2 class="section-title"><i class="fas fa-trophy"></i> Résultats</h2>
         <div class="winner-card">
@@ -138,7 +125,7 @@
           <div class="winner-avatar"><i class="fas fa-crown"></i></div>
           <div id="winner-name">–</div>
           <p>avec <span id="winner-votes">0</span> points</p>
-          <audio id="winner-audio" controls style="display:none;width:100%;margin-top:20px;"></audio>
+          <audio id="winner-audio" controls style="display:none;width:100%;margin-top:20px"></audio>
         </div>
       </div>
 
@@ -153,7 +140,6 @@
         <h3><i class="fas fa-info-circle"></i> Comment ajouter des médias</h3>
         <p>Dépose tes MP3/WAV/MP4 dans <code>public/media/</code></p>
       </div>
-
     </div>
   </div>
 
@@ -194,8 +180,7 @@
       const timerElem     = document.getElementById('timer');
 
       // State
-      let socket;
-      let recorder, recorded = [], mediaURL;
+      let socket, recorder, recorded = [], mediaURL;
       let mediaLibrary = [], players = {}, scores = {};
       let hasVoted = false, voteDone = false;
       let sequenceItems = [], seqIdx = 0;
@@ -240,14 +225,13 @@
           videoPlayer.style.display   = 'block';
           originalAudio.style.display = 'none';
         }
-        playBtn.disabled   = true;
-        submitBtn.disabled = true;
+        playBtn.disabled   = true; submitBtn.disabled = true;
       }
 
       // Players + voting
       function renderPlayers() {
         playersCont.innerHTML = '';
-        Object.entries(players).forEach(([name, p]) => {
+        Object.entries(players).forEach(([name,p]) => {
           const card = document.createElement('div');
           card.className = 'player-card';
           let html = `
@@ -270,23 +254,22 @@
         });
         document.querySelectorAll('.vote-btn').forEach(btn => {
           btn.onclick = () => {
-            const n = btn.dataset.name;
-            const w = parseInt(btn.dataset.score, 10);
-            socket.emit('vote', { name: n, weight: w });
+            const n = btn.dataset.name, w = parseInt(btn.dataset.score,10);
+            socket.emit('vote',{ name:n, weight:w });
             hasVoted = true;
             document.querySelectorAll(`.vote-btn[data-name="${n}"]`)
               .forEach(b => b.disabled = true);
           };
         });
-        const done  = Object.values(players).filter(p => p.submitted).length;
+        const done  = Object.values(players).filter(p=>p.submitted).length;
         const total = Object.keys(players).length;
-        votingStatus.textContent = done < total ? `${done}/${total} soumis` : 'Tous soumis !';
+        votingStatus.textContent = done<total?`${done}/${total} soumis`:'Tous soumis !';
       }
 
       // Scoreboard
       function renderScoreboard() {
         scoreList.innerHTML = '';
-        Object.entries(scores).sort((a,b)=>b[1]-a[1]).forEach(([n,pt]) => {
+        Object.entries(scores).sort((a,b)=>b[1]-a[1]).forEach(([n,pt])=>{
           const li = document.createElement('li');
           li.innerHTML = `<strong>${n}</strong>: ${pt} pt${pt>1?'s':''}`;
           scoreList.appendChild(li);
@@ -295,51 +278,48 @@
       }
 
       // Recorder
-      recordBtn.onclick = () => {
+      recordBtn.addEventListener('click', () => {
         if (!recorder) return;
         recorded = [];
-        recorder.state==='inactive' ? recorder.start() : recorder.stop();
-      };
-      playBtn.onclick   = () => mediaURL && new Audio(mediaURL).play();
-      submitBtn.onclick = () => {
+        if (recorder.state === 'inactive') recorder.start();
+        else recorder.stop();
+      });
+      playBtn.addEventListener('click', () => mediaURL && new Audio(mediaURL).play());
+      submitBtn.addEventListener('click', () => {
         submitBtn.disabled = true;
-        socket.emit('submit', { name: nameInput.value.trim(), url: mediaURL });
-      };
+        socket.emit('submit',{ name: nameInput.value.trim(), url: mediaURL });
+      });
 
       // Playback controls
-      showOriginal.onclick = () => {
+      showOriginal.addEventListener('click', () => {
         let url, type;
-        if (originalAudio.style.display==='block') {
-          url = originalAudio.src; type = 'audio';
-        } else {
-          url = videoPlayer.src; type = 'video';
-        }
-        socket.emit('playPlayback', { url, type });
-      };
+        if (originalAudio.style.display==='block') { url = originalAudio.src; type='audio'; }
+        else { url = videoPlayer.src; type='video'; }
+        socket.emit('playPlayback',{ url,type });
+      });
 
-      playAllBtn.onclick = () => {
-        seqPanel.style.display   = 'block';
+      playAllBtn.addEventListener('click', () => {
+        seqPanel.style.display = 'block';
         playAllBtn.style.display = 'none';
         socket.emit('playAllImitations');
-      };
+      });
 
-      endRoundBtn.onclick = () => {
+      endRoundBtn.addEventListener('click', () => {
         socket.emit('endRound');
         endRoundBtn.style.display = 'none';
-      };
+      });
 
-      nextRoundBtn.onclick = () => {
+      nextRoundBtn.addEventListener('click', () => {
         socket.emit('startRound');
         nextRoundBtn.style.display = 'none';
-      };
+      });
 
       // MediaRecorder setup
       navigator.mediaDevices.getUserMedia({ audio:true })
         .then(stream => {
           recorder = new MediaRecorder(stream);
           recorder.onstart = () => {
-            recIndicator.
-activate('active');
+            recIndicator.classList.add('active');
             initVisualizer();
             recordBtn.textContent = '⏹ Arrêter';
             window._visInt = setInterval(animateBars,200);
@@ -348,17 +328,17 @@ activate('active');
             clearInterval(window._visInt);
             recIndicator.classList.remove('active');
             recordBtn.textContent = '⏺ Enregistrer';
-            const blob = new Blob(recorded,{type:'audio/webm'});
+            const blob = new Blob(recorded,{ type:'audio/webm' });
             mediaURL = URL.createObjectURL(blob);
-            playBtn.disabled   = false;
+            playBtn.disabled = false;
             submitBtn.disabled = false;
           };
           recorder.ondataavailable = e => recorded.push(e.data);
         })
-        .catch(err => alert('Micro inaccessible: '+err.message));
+        .catch(err => alert('Micro inaccessible : '+err.message));
 
-      // Socket.IO
-      joinBtn.onclick = () => {
+      // Socket.IO & Join
+      joinBtn.addEventListener('click', () => {
         const name = nameInput.value.trim();
         if (!name) return alert('Entre un pseudo !');
         joinScreen.style.display = 'none';
@@ -368,74 +348,64 @@ activate('active');
         socket.on('isHost', b => isHost = b);
 
         const room = location.pathname.split('/').pop()||'main';
-        socket.emit('join',{room,name});
+        socket.emit('join',{ room, name });
 
         socket.on('mediaLibrary', lib => {
           mediaLibrary = lib;
           renderMediaList();
         });
-
         socket.on('newMedia', ({index,media}) => loadMedia(index));
-
         socket.on('players', pd => {
           players = pd;
           Object.keys(pd).forEach(n=>scores[n]=scores[n]||0);
           renderPlayers();
           renderScoreboard();
         });
-
         socket.on('playPlayback', ({url,type}) => {
           if(type==='audio') new Audio(url).play();
-          else {
-            videoPlayer.src=url;
-            videoPlayer.muted=true;
-            videoPlayer.play();
-          }
+          else { videoPlayer.src=url; videoPlayer.muted=true; videoPlayer.play(); }
         });
-
         socket.on('roundEnded', ({winner,players:pls}) => {
-          voteDone=true;
+          voteDone = true;
           Object.entries(pls).forEach(([n,p])=>{
-            scores[n]=(scores[n]||0)+p.net;
+            scores[n] = (scores[n]||0) + p.net;
           });
           renderScoreboard();
-          winnerName.textContent = winner;
-          winnerVotes.textContent= pls[winner].net;
-          winnerAudio.src        = pls[winner].audio;
+          winnerName.textContent  = winner;
+          winnerVotes.textContent = pls[winner].net;
+          winnerAudio.src         = pls[winner].audio;
           winnerAudio.style.display='block';
           resultsSec.style.display='block';
 
-          sequenceItems=Object.entries(pls)
+          sequenceItems = Object.entries(pls)
             .filter(([,p])=>p.submitted)
-            .map(([n,p])=>({name:n,url:p.audio}));
-          seqIdx=0;
-          seqProgress.textContent=`0/${sequenceItems.length}`;
-          seqBar.max=sequenceItems.length;
+            .map(([n,p])=>({ name:n, url:p.audio }));
+          seqIdx = 0;
+          seqProgress.textContent = `0/${sequenceItems.length}`;
+          seqBar.max = sequenceItems.length;
 
-          playAllBtn.style.display='inline-block';
+          playAllBtn.style.display = 'inline-block';
         });
-
-        socket.on('playOneImitation', ({name:urlName,url})=>{
+        socket.on('playOneImitation', ({name:urlName, url})=>{
           seqIdx++;
-          seqProgress.textContent=`${seqIdx}/${sequenceItems.length}`;
-          seqBar.value=seqIdx;
-          seqName.textContent=urlName;
-          seqAudio.src=url;
+          seqProgress.textContent = `${seqIdx}/${sequenceItems.length}`;
+          seqBar.value = seqIdx;
+          seqName.textContent = urlName;
+          seqAudio.src = url;
           seqAudio.load();
           seqAudio.play().catch(()=>{});
         });
-
-        socket.on('roundStarted',()=>{
-          voteDone=false;hasVoted=false;
-          resultsSec.style.display='none';
-          seqPanel.style.display='none';
-          playAllBtn.style.display='none';
+        socket.on('roundStarted', () => {
+          voteDone = false; hasVoted=false;
+          resultsSec.style.display = 'none';
+          seqPanel.style.display   = 'none';
+          playAllBtn.style.display = 'none';
           playBtn.disabled   = true;
           submitBtn.disabled = true;
-          endRoundBtn.style.display=isHost?'inline-block':'none';
+          endRoundBtn.style.display = isHost?'inline-block':'none';
           nextRoundBtn.style.display='none';
         });
-      };
+      });
     });
   </script>
 </body>
